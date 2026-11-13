@@ -1,7 +1,12 @@
 <?php
+error_reporting(0);
+ini_set('display_errors', 0);
+
 header('Content-Type: application/json; charset=utf-8');
 
-require_once __DIR__ . '/config.secret.php';
+if (file_exists(__DIR__ . '/config.secret.php')) {
+    require_once __DIR__ . '/config.secret.php';
+}
 $geminiApiKey = defined('GEMINI_API_KEY') ? GEMINI_API_KEY : '';
 
 $rawInput = file_get_contents('php://input');
@@ -94,27 +99,58 @@ if ($isApiKeyValid) {
         ]
     ];
 
-    $models = ['gemini-2.5-flash', 'gemini-1.5-flash'];
+    $models = ['gemini-2.5-flash', 'gemini-2.0-flash'];
+    $isVertexKey = (strpos($geminiApiKey, 'AQ.') === 0);
 
     foreach ($models as $modelName) {
-        $apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/{$modelName}:generateContent?key=" . urlencode($geminiApiKey);
+        if ($isVertexKey) {
+            $apiUrl = "https://aiplatform.googleapis.com/v1/publishers/google/models/{$modelName}:generateContent?key=" . urlencode($geminiApiKey);
+        } else {
+            $apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/{$modelName}:generateContent?key=" . urlencode($geminiApiKey);
+        }
 
-        $ch = curl_init();
-        curl_setopt_array($ch, [
-            CURLOPT_URL            => $apiUrl,
-            CURLOPT_POST           => true,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
-            CURLOPT_POSTFIELDS     => json_encode($payload),
-            CURLOPT_TIMEOUT        => 12,
-            CURLOPT_CONNECTTIMEOUT => 5,
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_SSL_VERIFYHOST => false
-        ]);
+        $apiResponse = null;
+        $httpCode    = 0;
 
-        $apiResponse = curl_exec($ch);
-        $httpCode    = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+        if (function_exists('curl_init')) {
+            $ch = curl_init();
+            curl_setopt_array($ch, [
+                CURLOPT_URL            => $apiUrl,
+                CURLOPT_POST           => true,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+                CURLOPT_POSTFIELDS     => json_encode($payload),
+                CURLOPT_TIMEOUT        => 12,
+                CURLOPT_CONNECTTIMEOUT => 5,
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_SSL_VERIFYHOST => false
+            ]);
+
+            $apiResponse = curl_exec($ch);
+            $httpCode    = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+        } else {
+            $opts = [
+                'http' => [
+                    'method'        => 'POST',
+                    'header'        => "Content-Type: application/json\r\n",
+                    'content'       => json_encode($payload),
+                    'timeout'       => 12,
+                    'ignore_errors' => true
+                ],
+                'ssl' => [
+                    'verify_peer'      => false,
+                    'verify_peer_name' => false
+                ]
+            ];
+            $context = stream_context_create($opts);
+            $apiResponse = @file_get_contents($apiUrl, false, $context);
+            if (!empty($http_response_header) && is_array($http_response_header)) {
+                if (preg_match('/HTTP\/\S+\s+(\d+)/', $http_response_header[0], $matches)) {
+                    $httpCode = (int)$matches[1];
+                }
+            }
+        }
 
         if ($httpCode === 200 && !empty($apiResponse)) {
             $respJson = json_decode($apiResponse, true);

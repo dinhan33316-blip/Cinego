@@ -2346,10 +2346,19 @@ document.addEventListener("DOMContentLoaded", () => {
       hideTypingIndicator();
 
       if (!response.ok) {
-        throw new Error(`HTTP Error: ${response.status}`);
+        const errorText = await response.text().catch(() => "");
+        console.error(`[CINEGO Chatbot AI] Server trả về mã lỗi HTTP ${response.status}:`, errorText);
+        throw new Error(`HTTP Error ${response.status}: ${errorText || response.statusText}`);
       }
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (jsonErr) {
+        console.error("[CINEGO Chatbot AI] Không thể phân tích phản hồi JSON từ chat-ai.php:", jsonErr);
+        throw jsonErr;
+      }
+
       const botReply = data.reply || "Xin lỗi, tôi chưa thể trả lời câu hỏi lúc này. Bạn có thể chọn các gợi ý bên trên nhé!";
       const botSource = data.source || "smart_bot";
 
@@ -2357,7 +2366,7 @@ document.addEventListener("DOMContentLoaded", () => {
       chatHistory.push({ role: "model", content: botReply });
 
     } catch (err) {
-      console.error("Lỗi khi kết nối Chatbot AI:", err);
+      console.error("[CINEGO Chatbot AI] Chi tiết lỗi khi kết nối chat-ai.php:", err);
       hideTypingIndicator();
 
       const fallbackReply = "Hệ thống AI đang tạm thời bận. Bạn có thể chọn trực tiếp các gợi ý nhanh hoặc bấm nút Đặt Vé ở thanh điều hướng để xem lịch chiếu hôm nay nhé!";
