@@ -88,33 +88,94 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  const SLIDE_INTERVAL_MS = 5000;
-  let heroYtPlayer = null;
-  let heroRevealTimer = null;
-  let pendingHeroVideoId = null;
+  const HERO_SLIDE_INTERVAL_MS = 18000;
+  let heroSlideInterval = null;
   let isHeroMuted = true;
+  let isHeroCinemaMode = false;
+  let heroYtPlayer = null;
+  let heroCurtainCheck = null;
+  let pendingHeroVideoId = null;
 
-  function hideHeroVideo() {
-    if (heroRevealTimer) {
-      clearTimeout(heroRevealTimer);
-      heroRevealTimer = null;
+  function resetHeroSlideTimer() {
+    if (heroSlideInterval) {
+      clearInterval(heroSlideInterval);
+      heroSlideInterval = null;
     }
-    const wrapper = document.getElementById("hero-video-wrapper");
-    if (wrapper) {
-      wrapper.style.opacity = "0";
-      wrapper.style.visibility = "hidden";
-      wrapper.classList.remove("video-ready");
+    AppState.heroTimer = null;
+    if (!isHeroCinemaMode && isHeroMuted === true) {
+      heroSlideInterval = setInterval(() => {
+        nextHeroSlide();
+      }, HERO_SLIDE_INTERVAL_MS);
+      AppState.heroTimer = heroSlideInterval;
     }
   }
 
-  function revealHeroVideo() {
-    const wrapper = document.getElementById("hero-video-wrapper");
-    if (wrapper) {
-      wrapper.style.visibility = "visible";
-      wrapper.style.opacity = "1";
-      wrapper.classList.add("video-ready");
+  function stopHeroSlideTimer() {
+    if (heroSlideInterval) {
+      clearInterval(heroSlideInterval);
+      heroSlideInterval = null;
+    }
+    AppState.heroTimer = null;
+  }
+
+  function nextHeroSlide() {
+    const list = getHeroList();
+    if (!list || list.length === 0) return;
+    const nextIndex = (AppState.currentHeroIndex + 1) % list.length;
+    renderHeroSlide(nextIndex);
+    resetHeroSlideTimer();
+  }
+
+  function prevHeroSlide() {
+    const list = getHeroList();
+    if (!list || list.length === 0) return;
+    const prevIndex = (AppState.currentHeroIndex - 1 + list.length) % list.length;
+    renderHeroSlide(prevIndex);
+    resetHeroSlideTimer();
+  }
+
+  const startAutoSlide = resetHeroSlideTimer;
+  const stopAutoSlide = stopHeroSlideTimer;
+
+  function closeHeroCurtain() {
+    if (heroCurtainCheck) {
+      clearInterval(heroCurtainCheck);
+      heroCurtainCheck = null;
+    }
+    const img = document.getElementById('hero-backdrop-img');
+    if (img) {
+      img.classList.remove('opacity-0', 'hero-curtain-hidden');
+      img.style.opacity = '0.99';
     }
   }
+
+  function revealHeroVideoSmoothly() {
+    if (heroCurtainCheck) clearInterval(heroCurtainCheck);
+    heroCurtainCheck = setInterval(() => {
+      if (
+        heroYtPlayer &&
+        typeof heroYtPlayer.getPlayerState === 'function' &&
+        typeof heroYtPlayer.getCurrentTime === 'function' &&
+        heroYtPlayer.getPlayerState() === YT.PlayerState.PLAYING &&
+        heroYtPlayer.getCurrentTime() >= 3.0
+      ) {
+        const img = document.getElementById('hero-backdrop-img');
+        if (img) img.style.opacity = '0';
+        clearInterval(heroCurtainCheck);
+        heroCurtainCheck = null;
+      }
+    }, 250);
+  }
+
+  const hideHeroVideo = closeHeroCurtain;
+  const revealHeroVideo = () => {
+    if (heroCurtainCheck) {
+      clearInterval(heroCurtainCheck);
+      heroCurtainCheck = null;
+    }
+    const img = document.getElementById('hero-backdrop-img');
+    if (img) img.style.opacity = '0';
+  };
 
   function extractYouTubeId(url) {
     if (!url) return "";
@@ -162,30 +223,23 @@ document.addEventListener("DOMContentLoaded", () => {
           },
           onStateChange: (event) => {
             if (event.data === YT.PlayerState.PLAYING) {
-              if (heroRevealTimer) {
-                clearTimeout(heroRevealTimer);
-                heroRevealTimer = null;
-              }
-              // Chờ 1.5s để video phát ổn định, triệt tiêu hoàn toàn biểu tượng pause của YouTube
-              heroRevealTimer = setTimeout(() => {
-                if (heroYtPlayer && typeof heroYtPlayer.getPlayerState === "function") {
-                  if (heroYtPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
-                    revealHeroVideo();
-                  }
-                } else {
-                  revealHeroVideo();
-                }
-              }, 1500);
+              revealHeroVideoSmoothly();
             } else if (event.data === YT.PlayerState.BUFFERING || event.data === YT.PlayerState.PAUSED) {
-              hideHeroVideo();
+              closeHeroCurtain();
             } else if (event.data === YT.PlayerState.ENDED) {
-              hideHeroVideo();
-              if (heroYtPlayer) {
-                if (typeof heroYtPlayer.seekTo === "function") heroYtPlayer.seekTo(0);
-                if (typeof heroYtPlayer.playVideo === "function") heroYtPlayer.playVideo();
+              closeHeroCurtain();
+              if (!isHeroCinemaMode) {
+                // Tự động chuyển tiếp sang phim kế tiếp khi trailer kết thúc
+                nextHeroSlide();
+              } else {
+                // Ở chế độ xem toàn màn hình (Cinema Mode), phát lặp lại trailer phim đang xem
+                if (heroYtPlayer) {
+                  if (typeof heroYtPlayer.seekTo === "function") heroYtPlayer.seekTo(0);
+                  if (typeof heroYtPlayer.playVideo === "function") heroYtPlayer.playVideo();
+                }
               }
             } else {
-              hideHeroVideo();
+              closeHeroCurtain();
             }
           }
         }
@@ -242,8 +296,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderHeroSlide(index) {
-    // Ẩn ngay video hiện tại
-    hideHeroVideo();
+    // Kéo màn chắn ảnh nền che kín video
+    closeHeroCurtain();
 
     const heroList = getHeroList();
     if (!heroList || heroList.length === 0) return;
@@ -278,11 +332,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const videoId = extractYouTubeId(trailerUrl);
 
-    // Cập nhật ngay ảnh nền thumbnail HD
+    // Cập nhật ngay ảnh nền thumbnail HD làm màn chắn che kín video
     if (heroBg) {
-      const thumbSrc = videoId
-        ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`
-        : (movie.backdrop || movie.poster || "");
+      const thumbSrc = movie.backdrop || (videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : (movie.poster || ""));
       const fallbackSrc = movie.poster || movie.backdrop || "";
 
       heroBg.onerror = function() {
@@ -290,7 +342,6 @@ document.addEventListener("DOMContentLoaded", () => {
         this.src = fallbackSrc;
       };
       heroBg.src = thumbSrc;
-      heroBg.style.opacity = "1";
     }
 
     // Cập nhật video nền qua YouTube IFrame Player API
@@ -345,12 +396,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (heroTrailerBtn) {
       heroTrailerBtn.onclick = () => {
+        // Đặt chế độ xem Cinema toàn màn hình và dừng tự động chuyển slide
+        isHeroCinemaMode = true;
+        if (heroSlideInterval) {
+          clearInterval(heroSlideInterval);
+          heroSlideInterval = null;
+        }
+
         // Bật tiếng video nền
         isHeroMuted = false;
         if (heroYtPlayer && typeof heroYtPlayer.unMute === "function") {
           heroYtPlayer.unMute();
         }
         updateHeroMuteUI(false);
+
+        // Mở ngay màn chắn để lộ video trailer
+        revealHeroVideo();
 
         // Làm mờ/ẩn khối chữ nội dung phim để xem toàn màn hình
         const heroContentWrapper = document.getElementById("hero-content-wrapper");
@@ -378,46 +439,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const updateHeroSlide = renderHeroSlide;
 
-  function nextHeroSlide() {
-    const list = getHeroList();
-    if (list.length === 0) return;
-    let nextIndex = (AppState.currentHeroIndex + 1) % list.length;
-    renderHeroSlide(nextIndex);
-  }
-
-  function prevHeroSlide() {
-    const list = getHeroList();
-    if (list.length === 0) return;
-    let prevIndex = (AppState.currentHeroIndex - 1 + list.length) % list.length;
-    renderHeroSlide(prevIndex);
-  }
-
-  function startAutoSlide() {
-    stopAutoSlide();
-    AppState.heroTimer = setInterval(() => {
-      nextHeroSlide();
-    }, SLIDE_INTERVAL_MS);
-  }
-
-  function stopAutoSlide() {
-    if (AppState.heroTimer) {
-      clearInterval(AppState.heroTimer);
-      AppState.heroTimer = null;
-    }
-  }
-
   const heroPrevBtn = document.getElementById("hero-prev-btn");
   const heroNextBtn = document.getElementById("hero-next-btn");
   if (heroPrevBtn) {
     heroPrevBtn.addEventListener("click", () => {
       prevHeroSlide();
-      startAutoSlide();
     });
   }
   if (heroNextBtn) {
     heroNextBtn.addEventListener("click", () => {
       nextHeroSlide();
-      startAutoSlide();
     });
   }
 
@@ -433,12 +464,24 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
       updateHeroMuteUI(isHeroMuted);
+
+      if (!isHeroMuted) {
+        // Tạm dừng chuyển slide khi người dùng đang bật tiếng xem trailer
+        if (heroSlideInterval) {
+          clearInterval(heroSlideInterval);
+          heroSlideInterval = null;
+        }
+      } else {
+        // Tắt tiếng lại thì tiếp tục đếm 18 giây
+        resetHeroSlideTimer();
+      }
     });
   }
 
   const heroExitCinemaBtn = document.getElementById("hero-exit-cinema-btn");
   if (heroExitCinemaBtn) {
     heroExitCinemaBtn.addEventListener("click", () => {
+      isHeroCinemaMode = false;
       const heroContentWrapper = document.getElementById("hero-content-wrapper");
       if (heroContentWrapper) {
         heroContentWrapper.classList.remove("opacity-0", "pointer-events-none");
@@ -446,23 +489,8 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       heroExitCinemaBtn.classList.add("hidden");
       heroExitCinemaBtn.classList.remove("inline-flex");
+      resetHeroSlideTimer();
     });
-  }
-
-  const heroSection = document.getElementById("hero");
-  if (heroSection) {
-    heroSection.addEventListener("mouseenter", () => {
-      stopAutoSlide();
-    });
-    heroSection.addEventListener("mouseleave", () => {
-      startAutoSlide();
-    });
-    heroSection.addEventListener("touchstart", () => {
-      stopAutoSlide();
-    }, { passive: true });
-    heroSection.addEventListener("touchend", () => {
-      startAutoSlide();
-    }, { passive: true });
   }
 
   const indicatorContainer = document.getElementById("hero-indicators");
@@ -476,13 +504,13 @@ document.addEventListener("DOMContentLoaded", () => {
       btn.addEventListener("click", () => {
         const idx = parseInt(btn.getAttribute("data-index"), 10);
         renderHeroSlide(idx);
-        startAutoSlide();
+        resetHeroSlideTimer();
       });
     });
   }
 
   renderHeroSlide(0);
-  startAutoSlide();
+  resetHeroSlideTimer();
 
   const quickCitySelect = document.getElementById("quick-city-select");
   const quickCinemaSelect = document.getElementById("quick-cinema-select");

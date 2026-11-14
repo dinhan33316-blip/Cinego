@@ -326,26 +326,26 @@ $cookieCustPhone = $_COOKIE['cinego_customer_phone'] ?? '';
 
   <section id="hero" class="relative min-h-[92vh] flex items-center pt-24 pb-20 overflow-hidden">
 
-    <!-- Lớp 1 (z-0): Ảnh nền tĩnh dự phòng trong khi video YouTube đang tải -->
+    <!-- Lớp 1 (z-10): Video trailer YouTube tràn viền toàn màn hình, luôn hiển thị ở nền dưới -->
+    <div id="hero-video-wrapper" class="absolute inset-0 z-10 overflow-hidden pointer-events-none" style="z-index:10;">
+      <div id="hero-bg-video" class="hero-bg-iframe"></div>
+    </div>
+
+    <!-- Lớp 2 (z-20): Màn chắn ảnh nền (curtain) che kín video khi YouTube nạp/đổi slide -->
     <img
       id="hero-backdrop-img"
       src="https://img.youtube.com/vi/73_1biulkYk/maxresdefault.jpg"
       alt="Hero Trailer Background"
-      class="absolute inset-0 w-full h-full object-cover object-center brightness-50 transition-all duration-700 pointer-events-none select-none"
-      style="z-index:0;"
+      class="absolute inset-0 w-full h-full object-cover object-center brightness-50 pointer-events-none select-none"
+      style="z-index: 20; opacity: 0.99; transition: opacity 0.8s ease-in-out;"
     />
 
-    <!-- Lớp 2 (z-10): Video trailer YouTube tràn viền toàn màn hình -->
-    <div id="hero-video-wrapper" class="absolute inset-0 z-10 overflow-hidden pointer-events-none" style="opacity: 0; visibility: hidden; transition: opacity 0.8s ease; pointer-events: none;">
-      <div id="hero-bg-video" class="hero-bg-iframe"></div>
-    </div>
+    <!-- Lớp 3 (z-30): Gradient tối hòa trộn viền mượt mà vào nền #0B0B0F -->
+    <div class="absolute inset-0 bg-gradient-to-r from-[#0B0B0F] via-[#0B0B0F]/75 to-transparent pointer-events-none" style="z-index:30;"></div>
+    <div class="absolute inset-0 bg-gradient-to-t from-[#0B0B0F] via-transparent to-[#0B0B0F]/60 pointer-events-none" style="z-index:30;"></div>
 
-    <!-- Lớp 3 (z-20): Gradient tối hòa trộn viền mượt mà vào nền #0B0B0F -->
-    <div class="absolute inset-0 bg-gradient-to-r from-[#0B0B0F] via-[#0B0B0F]/75 to-transparent pointer-events-none" style="z-index:20;"></div>
-    <div class="absolute inset-0 bg-gradient-to-t from-[#0B0B0F] via-transparent to-[#0B0B0F]/60 pointer-events-none" style="z-index:20;"></div>
-
-    <!-- Lớp 4 (z-30): Nội dung chữ, nút bấm và cụm điều khiển slide -->
-    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full" style="z-index:30;">
+    <!-- Lớp 4 (z-40): Nội dung chữ, nút bấm và cụm điều khiển slide -->
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full" style="z-index:40;">
       <div id="hero-content-wrapper" class="max-w-2xl transition-opacity duration-500">
 
         <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/60 border border-cine-red/40 backdrop-blur-md mb-6">
@@ -407,7 +407,7 @@ $cookieCustPhone = $_COOKIE['cinego_customer_phone'] ?? '';
     </div>
 
     <!-- Nút thoát chế độ xem video nền toàn màn hình -->
-    <div class="absolute bottom-10 left-4 sm:left-8 lg:left-12" style="z-index:30;">
+    <div class="absolute bottom-10 left-4 sm:left-8 lg:left-12" style="z-index:40;">
       <button
         id="hero-exit-cinema-btn"
         type="button"
@@ -418,7 +418,7 @@ $cookieCustPhone = $_COOKIE['cinego_customer_phone'] ?? '';
     </div>
 
     <!-- Cụm điều khiển góc dưới bên phải -->
-    <div class="absolute bottom-10 right-4 sm:right-8 lg:right-12 flex items-center gap-3 sm:gap-4" style="z-index:30;">
+    <div class="absolute bottom-10 right-4 sm:right-8 lg:right-12 flex items-center gap-3 sm:gap-4" style="z-index:40;">
 
       <!-- Nút Bật/Tắt tiếng video nền -->
       <button
