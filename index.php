@@ -111,41 +111,40 @@ $cookieCustPhone = $_COOKIE['cinego_customer_phone'] ?? '';
 
 <body class="bg-[#0B0B0F] text-white selection:bg-[#E50914] selection:text-white antialiased overflow-x-hidden min-h-screen flex flex-col justify-between">
 
-  <header id="main-nav" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 py-5">
+  <header id="main-nav" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 py-5 bg-gradient-to-b from-[#0B0B0F]/95 via-[#0B0B0F]/75 to-transparent backdrop-blur-md">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex items-center justify-between gap-4">
 
-        <a href="#hero" class="flex items-center gap-2.5 group">
-          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cine-red to-red-600 flex items-center justify-center text-white shadow-[0_0_20px_rgba(229,9,20,0.6)] group-hover:scale-105 transition-transform">
-
+        <a href="#hero" class="flex items-center gap-2.5 group whitespace-nowrap shrink-0">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cine-red to-red-600 flex items-center justify-center text-white shadow-[0_0_20px_rgba(229,9,20,0.6)] group-hover:scale-105 transition-transform shrink-0">
             <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
               <path d="M4 4h16c1.1 0 2 .9 2 2v3c-1.1 0-2 .9-2 2s.9 2 2 2v3c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2v-3c1.1 0 2-.9 2-2s-.9-2-2-2V6c0-1.1.9-2 2-2zm4 4v8h2V8H8zm6 0v8h2V8h-2z"/>
             </svg>
           </div>
           <div class="flex flex-col">
-            <span class="text-2xl font-black tracking-wider text-white font-sans">CINE<span class="text-cine-red">GO</span></span>
-            <span class="text-[9px] tracking-widest text-zinc-400 font-semibold uppercase -mt-1">Cinema Experience</span>
+            <span class="text-2xl font-black tracking-wider text-white font-sans leading-none">CINE<span class="text-cine-red">GO</span></span>
+            <span class="text-[9px] tracking-widest text-zinc-400 font-semibold uppercase mt-0.5">Cinema Experience</span>
           </div>
         </a>
 
-        <nav class="hidden lg:flex items-center gap-8 text-sm font-medium text-zinc-300">
-          <a href="#hero" class="hover:text-white transition-colors">Trang chủ</a>
-          <a href="#now-showing" class="hover:text-white transition-colors">Phim đang chiếu</a>
-          <a href="#coming-soon" class="hover:text-white transition-colors">Phim sắp chiếu</a>
-          <a href="#cinemas" class="hover:text-white transition-colors">Rạp chiếu</a>
-          <a href="#promotions" class="hover:text-white transition-colors">Ưu đãi</a>
+        <nav class="hidden lg:flex items-center gap-7 text-sm font-medium text-zinc-300 whitespace-nowrap">
+          <a href="#hero" class="hover:text-white transition-colors whitespace-nowrap">Trang chủ</a>
+          <a href="#now-showing" class="hover:text-white transition-colors whitespace-nowrap">Phim đang chiếu</a>
+          <a href="#coming-soon" class="hover:text-white transition-colors whitespace-nowrap">Phim sắp chiếu</a>
+          <a href="#cinemas" class="hover:text-white transition-colors whitespace-nowrap">Rạp chiếu</a>
+          <a href="#promotions" class="hover:text-white transition-colors whitespace-nowrap">Ưu đãi</a>
         </nav>
 
-        <div class="hidden sm:flex items-center gap-3">
+        <div class="hidden sm:flex items-center gap-2.5 whitespace-nowrap shrink-0">
 
           <button
             id="nav-search-btn"
             type="button"
             aria-label="Tìm kiếm phim"
-            class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 hover:text-white text-xs font-medium border border-zinc-700/60 transition-all">
+            title="Tìm kiếm phim, rạp (Ctrl + K)"
+            class="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white text-xs font-medium border border-white/10 hover:border-white/20 transition-all whitespace-nowrap shrink-0 cursor-pointer">
             <svg class="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-            <span class="hidden md:inline">Tìm phim, rạp...</span>
-            <kbd class="hidden md:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-zinc-800 rounded text-zinc-400 border border-zinc-700">ESC</kbd>
+            <kbd class="px-1.5 py-0.5 text-[10px] font-mono bg-black/40 rounded text-zinc-400 border border-white/10">Ctrl K</kbd>
           </button>
 
           <button
@@ -153,27 +152,18 @@ $cookieCustPhone = $_COOKIE['cinego_customer_phone'] ?? '';
             type="button"
             onclick="openTicketLookupModal()"
             title="Tra cứu vé của tôi bằng SĐT, Email hoặc Mã vé"
-            class="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-red-950/60 to-zinc-900 hover:from-red-900/60 hover:to-zinc-800 border border-red-500/50 text-red-300 hover:text-white text-xs font-semibold transition-all shadow-[0_0_15px_rgba(229,9,20,0.2)] cursor-pointer">
+            class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-red-950/60 to-zinc-900 hover:from-red-900/60 hover:to-zinc-800 border border-red-500/50 text-red-300 hover:text-white text-xs font-semibold transition-all shadow-[0_0_15px_rgba(229,9,20,0.2)] cursor-pointer whitespace-nowrap shrink-0">
             <svg class="w-4 h-4 text-cine-red shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
             <span>Tra cứu vé</span>
           </button>
 
-          <a
-            href="admin.php"
-            target="_blank"
-            title="Trang Quản Trị Hệ Thống CINEGO"
-            class="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-950/40 hover:bg-red-900/60 border border-red-500/40 text-red-300 hover:text-white text-xs font-semibold transition-all">
-            <svg class="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-            <span>Quản trị (Admin)</span>
-          </a>
-
-          <div id="nav-auth-container" class="relative">
+          <div id="nav-auth-container" class="relative whitespace-nowrap shrink-0">
 
             <button
               id="nav-login-btn"
               type="button"
               onclick="window.openAuthModal()"
-              class="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-300 hover:text-white hover:bg-zinc-800/80 transition-all flex items-center gap-1.5">
+              class="px-3.5 py-2 rounded-xl text-xs font-semibold text-zinc-300 hover:text-white hover:bg-white/10 transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
               <svg class="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
               <span>Đăng nhập</span>
             </button>
@@ -184,18 +174,18 @@ $cookieCustPhone = $_COOKIE['cinego_customer_phone'] ?? '';
                 type="button"
                 aria-haspopup="true"
                 aria-expanded="false"
-                class="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-700/80 text-white text-xs font-medium transition-all shadow-md focus:outline-none">
+                class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-700/80 text-white text-xs font-medium transition-all shadow-md focus:outline-none whitespace-nowrap cursor-pointer">
 
                 <div class="w-7 h-7 rounded-lg bg-gradient-to-tr from-cine-red to-amber-500 flex items-center justify-center text-white font-extrabold text-xs shadow-sm shrink-0">
                   <span id="nav-user-initial">D</span>
                 </div>
 
-                <div class="flex flex-col text-left max-w-[140px] truncate">
+                <div class="flex flex-col text-left max-w-[130px] truncate">
                   <span id="nav-user-email" class="text-xs font-bold text-white truncate">dinhan33316@gmail.com</span>
                   <span class="text-[10px] text-amber-400 font-semibold -mt-0.5">Thành viên VIP</span>
                 </div>
 
-                <svg id="nav-user-chevron" class="w-3.5 h-3.5 text-zinc-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                <svg id="nav-user-chevron" class="w-3.5 h-3.5 text-zinc-400 transition-transform duration-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
               </button>
 
               <div
@@ -210,7 +200,7 @@ $cookieCustPhone = $_COOKIE['cinego_customer_phone'] ?? '';
                 <button
                   type="button"
                   id="dropdown-account-btn"
-                  class="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium text-zinc-300 hover:text-white hover:bg-zinc-800/80 transition-colors text-left">
+                  class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-zinc-300 hover:text-white hover:bg-zinc-800/80 transition-colors text-left cursor-pointer">
                   <svg class="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
                   <span>Tài khoản của tôi</span>
                 </button>
@@ -218,17 +208,25 @@ $cookieCustPhone = $_COOKIE['cinego_customer_phone'] ?? '';
                 <button
                   type="button"
                   id="dropdown-history-btn"
-                  class="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium text-zinc-300 hover:text-white hover:bg-zinc-800/80 transition-colors text-left">
+                  class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-zinc-300 hover:text-white hover:bg-zinc-800/80 transition-colors text-left cursor-pointer">
                   <svg class="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
                   <span>Lịch sử đặt vé</span>
                 </button>
+
+                <a
+                  href="admin.php"
+                  target="_blank"
+                  class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-amber-400 hover:text-amber-300 hover:bg-amber-950/30 transition-colors text-left">
+                  <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                  <span>Quản trị hệ thống (Admin)</span>
+                </a>
 
                 <div class="border-t border-zinc-800 my-1"></div>
 
                 <button
                   id="dropdown-logout-btn"
                   type="button"
-                  class="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-red-400 hover:text-red-300 hover:bg-red-950/40 transition-colors text-left">
+                  class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-red-400 hover:text-red-300 hover:bg-red-950/40 transition-colors text-left cursor-pointer">
                   <svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
                   <span>Đăng xuất</span>
                 </button>
@@ -239,7 +237,7 @@ $cookieCustPhone = $_COOKIE['cinego_customer_phone'] ?? '';
           <button
             type="button"
             onclick="window.openBookingModal()"
-            class="relative inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-cine-red hover:bg-cine-red-hover text-white text-xs font-bold uppercase tracking-wider transition-all duration-300 shadow-[0_0_20px_rgba(229,9,20,0.5)] hover:shadow-[0_0_30px_rgba(229,9,20,0.8)] active:scale-95">
+            class="relative inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-cine-red hover:bg-cine-red-hover text-white text-xs font-bold uppercase tracking-wider transition-all duration-300 shadow-[0_0_20px_rgba(229,9,20,0.5)] hover:shadow-[0_0_30px_rgba(229,9,20,0.8)] active:scale-95 whitespace-nowrap shrink-0">
             <span class="flex items-center gap-1.5">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
               Đặt vé ngay
@@ -328,110 +326,117 @@ $cookieCustPhone = $_COOKIE['cinego_customer_phone'] ?? '';
 
   <section id="hero" class="relative min-h-[92vh] flex items-center pt-24 pb-20 overflow-hidden">
 
-    <div class="absolute inset-0 z-0">
-      <img
-        id="hero-backdrop-img"
-        src="https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=1600&auto=format&fit=crop&q=80"
-        alt="Movie Hero Banner"
-        class="w-full h-full object-cover object-center transition-all duration-700 scale-105"
-      />
+    <!-- Lớp 1 (z-0): Ảnh nền tĩnh dự phòng trong khi video YouTube đang tải -->
+    <img
+      id="hero-backdrop-img"
+      src=""
+      alt=""
+      class="absolute inset-0 w-full h-full object-cover object-center brightness-50 transition-all duration-700 pointer-events-none select-none"
+      style="z-index:0;"
+    />
 
-      <div class="absolute inset-0 hero-overlay-gradient"></div>
-      <div class="absolute inset-0 hero-side-gradient"></div>
-      <div class="absolute inset-0 spotlight-radial"></div>
+    <!-- Lớp 2 (z-10): Video trailer YouTube tràn viền toàn màn hình -->
+    <div id="hero-video-wrapper" class="absolute inset-0 overflow-hidden pointer-events-none" style="z-index:10;">
+      <iframe id="hero-bg-video" class="hero-bg-iframe" src="" allow="autoplay; encrypted-media" allowfullscreen></iframe>
     </div>
 
-    <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+    <!-- Lớp 3 (z-20): Gradient tối hòa trộn viền mượt mà vào nền #0B0B0F -->
+    <div class="absolute inset-0 bg-gradient-to-r from-[#0B0B0F] via-[#0B0B0F]/75 to-transparent pointer-events-none" style="z-index:20;"></div>
+    <div class="absolute inset-0 bg-gradient-to-t from-[#0B0B0F] via-transparent to-[#0B0B0F]/60 pointer-events-none" style="z-index:20;"></div>
 
-        <div class="lg:col-span-8 max-w-3xl">
+    <!-- Lớp 4 (z-30): Nội dung chữ, nút bấm và cụm điều khiển slide -->
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full" style="z-index:30;">
+      <div id="hero-content-wrapper" class="max-w-2xl transition-opacity duration-500">
 
-          <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/60 border border-cine-red/40 backdrop-blur-md mb-6">
-            <span class="w-2 h-2 rounded-full bg-cine-red badge-pulse"></span>
-            <span id="hero-tagline" class="text-xs font-bold uppercase tracking-widest text-zinc-200">
-              TRẢI NGHIỆM ĐIỆN ẢNH ĐỈNH CAO
-            </span>
+        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/60 border border-cine-red/40 backdrop-blur-md mb-6">
+          <span class="w-2 h-2 rounded-full bg-cine-red badge-pulse"></span>
+          <span id="hero-tagline" class="text-xs font-bold uppercase tracking-widest text-zinc-200">
+            TRẢI NGHIỆM ĐIỆN ẢNH ĐỈNH CAO
+          </span>
+        </div>
+
+        <h1 id="hero-title" class="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.1] mb-5 transition-opacity duration-300 drop-shadow-md">
+          Deadpool & Wolverine
+        </h1>
+
+        <div class="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-zinc-300 font-medium mb-5">
+          <span id="hero-age" class="px-2.5 py-1 rounded-md bg-cine-red font-black text-white text-xs shadow-sm">T18</span>
+          <div class="flex items-center gap-1.5 text-amber-400 font-bold bg-black/60 px-3 py-1 rounded-md border border-amber-500/25 shadow-sm">
+            <svg class="w-4 h-4 fill-amber-400 text-amber-400" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <span id="hero-rating">9.3</span>/10
           </div>
+          <span id="hero-duration" class="text-zinc-400">128 phút</span>
+          <span class="text-zinc-600">•</span>
+          <span id="hero-genre" class="text-zinc-300 font-medium">Hành động, Hài hước, Viễn tưởng</span>
+          <div id="hero-formats" class="flex items-center gap-1.5 ml-1">
 
-          <h1 id="hero-title" class="text-4xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.1] mb-5 transition-opacity duration-300">
-            Deadpool & Wolverine
-          </h1>
-
-          <div class="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-zinc-300 font-medium mb-5">
-            <span id="hero-age" class="px-2.5 py-1 rounded-md bg-cine-red font-black text-white text-xs">T18</span>
-            <div class="flex items-center gap-1 text-amber-400 font-bold bg-black/50 px-2.5 py-1 rounded-md border border-amber-500/20">
-              <svg class="w-4 h-4 fill-amber-400 text-amber-400" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-              <span id="hero-rating">9.3</span>/10
-            </div>
-            <span id="hero-duration" class="text-zinc-400">128 phút</span>
-            <span class="text-zinc-600">•</span>
-            <span id="hero-genre" class="text-zinc-300 font-medium">Hành động, Hài hước, Viễn tưởng</span>
-            <div id="hero-formats" class="flex items-center gap-1.5 ml-1">
-
-            </div>
-          </div>
-
-          <p id="hero-desc" class="text-sm sm:text-base text-zinc-300 leading-relaxed max-w-2xl mb-8 line-clamp-3 transition-opacity duration-300">
-            Khám phá những bom tấn mới nhất. Chọn ghế yêu thích và đặt vé chỉ trong vài thao tác cùng CINEGO. Hệ thống âm thanh vòm sống động và màn hình chiếu khổng lồ.
-          </p>
-
-          <div class="flex flex-wrap items-center gap-4">
-
-            <button
-              id="hero-book-btn"
-              type="button"
-              class="px-7 py-3.5 rounded-xl bg-cine-red hover:bg-cine-red-hover text-white text-sm font-bold uppercase tracking-wider transition-all duration-300 shadow-[0_0_25px_rgba(229,9,20,0.6)] hover:shadow-[0_0_35px_rgba(229,9,20,0.9)] flex items-center gap-2.5 active:scale-95">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
-              Đặt vé ngay
-            </button>
-
-            <button
-              id="hero-trailer-btn"
-              type="button"
-              class="px-6 py-3.5 rounded-xl glass-panel hover:bg-white/15 text-white text-sm font-semibold transition-all flex items-center gap-2 border border-white/20">
-              <div class="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
-                <svg class="w-3.5 h-3.5 fill-current text-cine-red" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-              </div>
-              Xem Trailer
-            </button>
-
-            <a
-              href="#now-showing"
-              class="px-5 py-3.5 rounded-xl text-zinc-300 hover:text-white text-sm font-medium transition-colors flex items-center gap-1.5">
-              Xem lịch chiếu &darr;
-            </a>
           </div>
         </div>
 
-        <div class="hidden lg:flex lg:col-span-4 justify-end items-center pr-6">
-          <div class="relative group cursor-pointer" onclick="document.getElementById('hero-book-btn').click()">
+        <p id="hero-desc" class="text-sm sm:text-base text-zinc-300/90 leading-relaxed max-w-2xl mb-8 line-clamp-3 transition-opacity duration-300">
+          Khám phá những bom tấn mới nhất. Chọn ghế yêu thích và đặt vé chỉ trong vài thao tác cùng CINEGO. Hệ thống âm thanh vòm sống động và màn hình chiếu khổng lồ.
+        </p>
 
-            <div class="absolute -inset-2 rounded-3xl bg-gradient-to-r from-cine-red/50 to-amber-500/30 opacity-40 blur-xl group-hover:opacity-75 transition-all duration-500"></div>
+        <div class="flex flex-wrap items-center gap-3.5 sm:gap-4">
 
-            <div class="relative w-64 aspect-[2/3] rounded-2xl overflow-hidden border border-white/15 bg-zinc-900 shadow-[0_20px_50px_rgba(0,0,0,0.9)]">
-              <img
-                id="hero-poster-img"
-                src="https://image.tmdb.org/t/p/w500/8cdWjvZQUExUUTzyp4t6EDMubfO.jpg"
-                alt="Featured Movie Poster"
-                class="w-full h-full object-cover transition-all duration-500 group-hover:scale-105"
-              />
-              <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
+          <button
+            id="hero-book-btn"
+            type="button"
+            class="px-7 py-3.5 rounded-xl bg-cine-red hover:bg-cine-red-hover text-white text-sm font-bold uppercase tracking-wider transition-all duration-300 shadow-[0_0_25px_rgba(229,9,20,0.6)] hover:shadow-[0_0_35px_rgba(229,9,20,0.9)] flex items-center gap-2.5 active:scale-95 whitespace-nowrap cursor-pointer">
+            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
+            <span>Đặt vé ngay</span>
+          </button>
 
-              <div class="absolute bottom-3 left-3 right-3 flex items-center justify-between text-xs">
-                <span class="px-2.5 py-1 rounded-md bg-cine-red text-white font-black text-[11px] shadow">ĐANG CHIẾU</span>
-                <span class="flex items-center gap-1 font-bold text-amber-400 bg-black/70 px-2 py-0.5 rounded backdrop-blur-md border border-amber-500/20">
-                  <svg class="w-3 h-3 fill-amber-400" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                  <span id="hero-poster-rating">9.3</span>
-                </span>
-              </div>
+          <button
+            id="hero-trailer-btn"
+            type="button"
+            class="px-6 py-3.5 rounded-xl glass-panel hover:bg-white/15 text-white text-sm font-semibold transition-all flex items-center gap-2 border border-white/20 whitespace-nowrap cursor-pointer shadow-lg">
+            <div class="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+              <svg class="w-3.5 h-3.5 fill-current text-cine-red ml-0.5" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
             </div>
-          </div>
-        </div>
+            <span>Xem Trailer</span>
+          </button>
 
+          <a
+            href="#now-showing"
+            class="px-4 py-3.5 rounded-xl text-zinc-300 hover:text-white text-sm font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap">
+            <span>Xem lịch chiếu &darr;</span>
+          </a>
+        </div>
       </div>
     </div>
 
-    <div class="absolute bottom-10 right-4 sm:right-8 lg:right-12 z-20 flex items-center gap-4">
+    <!-- Nút thoát chế độ xem video nền toàn màn hình -->
+    <div class="absolute bottom-10 left-4 sm:left-8 lg:left-12" style="z-index:30;">
+      <button
+        id="hero-exit-cinema-btn"
+        type="button"
+        class="hidden items-center gap-2 px-4 py-2.5 rounded-xl bg-black/75 hover:bg-zinc-800 text-white text-xs font-bold border border-white/20 backdrop-blur-md shadow-xl transition-all cursor-pointer">
+        <svg class="w-4 h-4 text-cine-red" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+        <span>← Hiện thông tin phim</span>
+      </button>
+    </div>
+
+    <!-- Cụm điều khiển góc dưới bên phải -->
+    <div class="absolute bottom-10 right-4 sm:right-8 lg:right-12 flex items-center gap-3 sm:gap-4" style="z-index:30;">
+
+      <!-- Nút Bật/Tắt tiếng video nền -->
+      <button
+        id="hero-mute-btn"
+        type="button"
+        aria-label="Bật/Tắt tiếng trailer"
+        title="Bật/Tắt âm thanh trailer"
+        class="w-10 h-10 rounded-xl bg-black/60 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-700/60 backdrop-blur-md flex items-center justify-center transition-all cursor-pointer">
+        <!-- Icon Loa Tắt (Muted) -->
+        <svg id="hero-mute-icon-muted" class="w-5 h-5 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+        </svg>
+        <!-- Icon Loa Bật (Unmuted) -->
+        <svg id="hero-mute-icon-unmuted" class="w-5 h-5 text-cine-red hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+        </svg>
+      </button>
 
       <div id="hero-indicators" class="flex items-center gap-2"></div>
 
@@ -439,13 +444,13 @@ $cookieCustPhone = $_COOKIE['cinego_customer_phone'] ?? '';
         <button
           id="hero-prev-btn"
           aria-label="Phim trước"
-          class="w-10 h-10 rounded-xl bg-black/60 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-700/60 backdrop-blur-md flex items-center justify-center transition-all">
+          class="w-10 h-10 rounded-xl bg-black/60 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-700/60 backdrop-blur-md flex items-center justify-center transition-all cursor-pointer">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
         </button>
         <button
           id="hero-next-btn"
           aria-label="Phim sau"
-          class="w-10 h-10 rounded-xl bg-black/60 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-700/60 backdrop-blur-md flex items-center justify-center transition-all">
+          class="w-10 h-10 rounded-xl bg-black/60 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-700/60 backdrop-blur-md flex items-center justify-center transition-all cursor-pointer">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
         </button>
       </div>

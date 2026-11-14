@@ -353,3 +353,17 @@ body.modal-open {
   transform: translateY(-2px);
   box-shadow: 0 6px 18px rgba(229, 9, 20, 0.55);
 }
+
+/* Video Trailer Nền Tràn Viền Toàn Màn Hình */
+.hero-bg-iframe {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100vw;
+  height: 56.25vw;
+  min-height: 100%;
+  min-width: 177.77vh;
+  transform: translate(-50%, -50%) scale(1.18);
+  pointer-events: none;
+  border: 0;
+}

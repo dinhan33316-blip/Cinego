@@ -89,6 +89,43 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   const SLIDE_INTERVAL_MS = 5000;
+  let isHeroMuted = true;
+
+  function extractYouTubeId(url) {
+    if (!url) return "";
+    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
+    return match ? match[1] : "";
+  }
+
+  function sendHeroVideoCommand(func, args = "") {
+    const heroVideo = document.getElementById("hero-bg-video");
+    if (!heroVideo || !heroVideo.contentWindow) return;
+    try {
+      heroVideo.contentWindow.postMessage(
+        JSON.stringify({ event: "command", func: func, args: args }),
+        "*"
+      );
+    } catch (e) {
+      console.warn("Không thể gửi postMessage tới hero video:", e);
+    }
+  }
+
+  function updateHeroMuteUI(muted) {
+    const iconMuted = document.getElementById("hero-mute-icon-muted");
+    const iconUnmuted = document.getElementById("hero-mute-icon-unmuted");
+    const muteBtn = document.getElementById("hero-mute-btn");
+    if (iconMuted && iconUnmuted) {
+      if (muted) {
+        iconMuted.classList.remove("hidden");
+        iconUnmuted.classList.add("hidden");
+        if (muteBtn) muteBtn.title = "Bật âm thanh trailer";
+      } else {
+        iconMuted.classList.add("hidden");
+        iconUnmuted.classList.remove("hidden");
+        if (muteBtn) muteBtn.title = "Tắt âm thanh trailer";
+      }
+    }
+  }
 
   function renderHeroSlide(index) {
     const movie = CINEGO_DATA.heroMovies[index];
@@ -96,8 +133,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     AppState.currentHeroIndex = index;
     const heroBg = document.getElementById("hero-backdrop-img");
-    const heroPoster = document.getElementById("hero-poster-img");
-    const heroPosterRating = document.getElementById("hero-poster-rating");
+    const heroVideo = document.getElementById("hero-bg-video");
     const heroTitle = document.getElementById("hero-title");
     const heroTagline = document.getElementById("hero-tagline");
     const heroDesc = document.getElementById("hero-desc");
@@ -110,24 +146,40 @@ document.addEventListener("DOMContentLoaded", () => {
     const heroTrailerBtn = document.getElementById("hero-trailer-btn");
 
     if (heroBg) {
-      heroBg.style.opacity = "0.3";
-      setTimeout(() => {
-        heroBg.src = movie.backdrop;
+      const videoId = extractYouTubeId(movie.trailerUrl);
+      const thumbSrc = videoId
+        ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`
+        : (movie.backdrop || movie.poster || "");
+      const fallbackSrc = movie.backdrop || movie.poster || "";
+
+      heroBg.style.opacity = "0.2";
+      heroBg.style.transition = "opacity 0.4s ease";
+      heroBg.onerror = null;
+      const img = new Image();
+      img.onload = () => {
+        heroBg.onerror = () => { heroBg.src = fallbackSrc; heroBg.onerror = null; };
+        heroBg.src = img.src;
         heroBg.style.opacity = "1";
-      }, 150);
+      };
+      img.onerror = () => {
+        heroBg.onerror = null;
+        heroBg.src = fallbackSrc;
+        heroBg.style.opacity = "1";
+      };
+      img.src = thumbSrc;
     }
 
-    if (heroPoster) {
-      heroPoster.style.opacity = "0.4";
-      heroPoster.style.transform = "scale(0.96)";
-      setTimeout(() => {
-        heroPoster.src = movie.poster;
-        heroPoster.style.opacity = "1";
-        heroPoster.style.transform = "scale(1)";
-      }, 150);
+    if (heroVideo) {
+      const videoId = extractYouTubeId(movie.trailerUrl);
+      if (videoId) {
+        const muteParam = isHeroMuted ? 1 : 0;
+        const newSrc = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=${muteParam}&loop=1&playlist=${videoId}&controls=0&showinfo=0&rel=0&modestbranding=1&iv_load_policy=3&playsinline=1&enablejsapi=1`;
+        if (heroVideo.getAttribute("data-video-id") !== videoId) {
+          heroVideo.setAttribute("data-video-id", videoId);
+          heroVideo.src = newSrc;
+        }
+      }
     }
-
-    if (heroPosterRating) heroPosterRating.innerText = movie.rating;
 
     if (heroTitle) {
       heroTitle.style.opacity = "0.4";
@@ -166,7 +218,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (heroTrailerBtn) {
       heroTrailerBtn.onclick = () => {
-        openTrailerModal(movie.trailerUrl, movie.title);
+        // Bật tiếng video nền
+        isHeroMuted = false;
+        sendHeroVideoCommand("unMute");
+        updateHeroMuteUI(false);
+
+        // Làm mờ/ẩn khối chữ nội dung phim để xem toàn màn hình
+        const heroContentWrapper = document.getElementById("hero-content-wrapper");
+        const heroExitCinemaBtn = document.getElementById("hero-exit-cinema-btn");
+        if (heroContentWrapper) {
+          heroContentWrapper.classList.add("opacity-0", "pointer-events-none");
+          heroContentWrapper.classList.remove("opacity-100", "pointer-events-auto");
+        }
+        if (heroExitCinemaBtn) {
+          heroExitCinemaBtn.classList.remove("hidden");
+          heroExitCinemaBtn.classList.add("inline-flex");
+        }
       };
     }
 
@@ -179,6 +246,8 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
+
+  const updateHeroSlide = renderHeroSlide;
 
   function nextHeroSlide() {
     let nextIndex = (AppState.currentHeroIndex + 1) % CINEGO_DATA.heroMovies.length;
@@ -216,6 +285,32 @@ document.addEventListener("DOMContentLoaded", () => {
     heroNextBtn.addEventListener("click", () => {
       nextHeroSlide();
       startAutoSlide();
+    });
+  }
+
+  const heroMuteBtn = document.getElementById("hero-mute-btn");
+  if (heroMuteBtn) {
+    heroMuteBtn.addEventListener("click", () => {
+      isHeroMuted = !isHeroMuted;
+      if (isHeroMuted) {
+        sendHeroVideoCommand("mute");
+      } else {
+        sendHeroVideoCommand("unMute");
+      }
+      updateHeroMuteUI(isHeroMuted);
+    });
+  }
+
+  const heroExitCinemaBtn = document.getElementById("hero-exit-cinema-btn");
+  if (heroExitCinemaBtn) {
+    heroExitCinemaBtn.addEventListener("click", () => {
+      const heroContentWrapper = document.getElementById("hero-content-wrapper");
+      if (heroContentWrapper) {
+        heroContentWrapper.classList.remove("opacity-0", "pointer-events-none");
+        heroContentWrapper.classList.add("opacity-100", "pointer-events-auto");
+      }
+      heroExitCinemaBtn.classList.add("hidden");
+      heroExitCinemaBtn.classList.remove("inline-flex");
     });
   }
 
@@ -845,6 +940,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   window.openTrailerModal = function(url, title = "Xem Trailer") {
     if (!trailerModal || !trailerFrame) return;
+    sendHeroVideoCommand("mute");
+    updateHeroMuteUI(true);
+    isHeroMuted = true;
     trailerTitle.innerText = title;
 
     let embedUrl = (url || "").trim();
