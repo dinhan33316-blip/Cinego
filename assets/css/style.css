@@ -363,7 +363,7 @@ body.modal-open {
   height: 56.25vw;
   min-height: 100%;
   min-width: 177.77vh;
-  transform: translate(-50%, -50%) scale(1.18);
+  transform: translate(-50%, -50%) scale(1.32);
   pointer-events: none;
   border: 0;
 }

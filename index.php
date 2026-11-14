@@ -92,7 +92,7 @@ $cookieCustPhone = $_COOKIE['cinego_customer_phone'] ?? '';
 
   <script src="https://unpkg.com/lucide@latest"></script>
 
-  <link rel="stylesheet" href="assets/css/style.css" />
+  <link rel="stylesheet" href="assets/css/style.css?v=<?php echo time(); ?>" />
   <style>
     #ticketLookupModal, #ticket-lookup-modal {
       display: none;
@@ -329,15 +329,15 @@ $cookieCustPhone = $_COOKIE['cinego_customer_phone'] ?? '';
     <!-- Lớp 1 (z-0): Ảnh nền tĩnh dự phòng trong khi video YouTube đang tải -->
     <img
       id="hero-backdrop-img"
-      src=""
-      alt=""
+      src="https://img.youtube.com/vi/73_1biulkYk/maxresdefault.jpg"
+      alt="Hero Trailer Background"
       class="absolute inset-0 w-full h-full object-cover object-center brightness-50 transition-all duration-700 pointer-events-none select-none"
       style="z-index:0;"
     />
 
     <!-- Lớp 2 (z-10): Video trailer YouTube tràn viền toàn màn hình -->
-    <div id="hero-video-wrapper" class="absolute inset-0 overflow-hidden pointer-events-none" style="z-index:10;">
-      <iframe id="hero-bg-video" class="hero-bg-iframe" src="" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+    <div id="hero-video-wrapper" class="absolute inset-0 z-10 overflow-hidden pointer-events-none" style="opacity: 0; visibility: hidden; transition: opacity 0.8s ease; pointer-events: none;">
+      <div id="hero-bg-video" class="hero-bg-iframe"></div>
     </div>
 
     <!-- Lớp 3 (z-20): Gradient tối hòa trộn viền mượt mà vào nền #0B0B0F -->
@@ -438,7 +438,7 @@ $cookieCustPhone = $_COOKIE['cinego_customer_phone'] ?? '';
         </svg>
       </button>
 
-      <div id="hero-indicators" class="flex items-center gap-2"></div>
+      <div id="hero-indicators" class="flex items-center gap-1.5"></div>
 
       <div class="flex items-center gap-2">
         <button
@@ -1798,7 +1798,7 @@ $cookieCustPhone = $_COOKIE['cinego_customer_phone'] ?? '';
     </form>
   </div>
 
-  <script src="assets/js/data.js"></script>
+  <script src="assets/js/data.js?v=<?php echo time(); ?>"></script>
   <script>
     window.CINEGO_COOKIES = {
       name: <?php echo json_encode($cookieCustName, JSON_UNESCAPED_UNICODE); ?>,
@@ -2102,6 +2102,6 @@ $cookieCustPhone = $_COOKIE['cinego_customer_phone'] ?? '';
       }
     });
   </script>
-  <script src="assets/js/app.js"></script>
+  <script src="assets/js/app.js?v=<?php echo time(); ?>"></script>
 </body>
 </html>

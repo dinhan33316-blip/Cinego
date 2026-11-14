@@ -89,7 +89,32 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   const SLIDE_INTERVAL_MS = 5000;
+  let heroYtPlayer = null;
+  let heroRevealTimer = null;
+  let pendingHeroVideoId = null;
   let isHeroMuted = true;
+
+  function hideHeroVideo() {
+    if (heroRevealTimer) {
+      clearTimeout(heroRevealTimer);
+      heroRevealTimer = null;
+    }
+    const wrapper = document.getElementById("hero-video-wrapper");
+    if (wrapper) {
+      wrapper.style.opacity = "0";
+      wrapper.style.visibility = "hidden";
+      wrapper.classList.remove("video-ready");
+    }
+  }
+
+  function revealHeroVideo() {
+    const wrapper = document.getElementById("hero-video-wrapper");
+    if (wrapper) {
+      wrapper.style.visibility = "visible";
+      wrapper.style.opacity = "1";
+      wrapper.classList.add("video-ready");
+    }
+  }
 
   function extractYouTubeId(url) {
     if (!url) return "";
@@ -97,18 +122,97 @@ document.addEventListener("DOMContentLoaded", () => {
     return match ? match[1] : "";
   }
 
-  function sendHeroVideoCommand(func, args = "") {
-    const heroVideo = document.getElementById("hero-bg-video");
-    if (!heroVideo || !heroVideo.contentWindow) return;
+  function initHeroYouTubePlayer() {
+    if (heroYtPlayer) return;
+    if (!window.YT || !window.YT.Player) return;
+    const heroVideoEl = document.getElementById("hero-bg-video");
+    if (!heroVideoEl) return;
+
+    const heroList = getHeroList();
+    const firstMovie = heroList[0];
+    const initialVideoId = pendingHeroVideoId || (firstMovie ? extractYouTubeId(firstMovie.trailerUrl) : "73_1biulkYk");
+
     try {
-      heroVideo.contentWindow.postMessage(
-        JSON.stringify({ event: "command", func: func, args: args }),
-        "*"
-      );
+      heroYtPlayer = new YT.Player("hero-bg-video", {
+        videoId: initialVideoId || "73_1biulkYk",
+        playerVars: {
+          autoplay: 1,
+          mute: 1,
+          controls: 0,
+          disablekb: 1,
+          fs: 0,
+          iv_load_policy: 3,
+          modestbranding: 1,
+          rel: 0,
+          playsinline: 1
+        },
+        events: {
+          onReady: (event) => {
+            if (isHeroMuted) {
+              if (typeof event.target.mute === "function") event.target.mute();
+            } else {
+              if (typeof event.target.unMute === "function") event.target.unMute();
+            }
+            if (pendingHeroVideoId && pendingHeroVideoId !== initialVideoId) {
+              event.target.loadVideoById(pendingHeroVideoId);
+              pendingHeroVideoId = null;
+            } else if (typeof event.target.playVideo === "function") {
+              event.target.playVideo();
+            }
+          },
+          onStateChange: (event) => {
+            if (event.data === YT.PlayerState.PLAYING) {
+              if (heroRevealTimer) {
+                clearTimeout(heroRevealTimer);
+                heroRevealTimer = null;
+              }
+              // Chờ 1.5s để video phát ổn định, triệt tiêu hoàn toàn biểu tượng pause của YouTube
+              heroRevealTimer = setTimeout(() => {
+                if (heroYtPlayer && typeof heroYtPlayer.getPlayerState === "function") {
+                  if (heroYtPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
+                    revealHeroVideo();
+                  }
+                } else {
+                  revealHeroVideo();
+                }
+              }, 1500);
+            } else if (event.data === YT.PlayerState.BUFFERING || event.data === YT.PlayerState.PAUSED) {
+              hideHeroVideo();
+            } else if (event.data === YT.PlayerState.ENDED) {
+              hideHeroVideo();
+              if (heroYtPlayer) {
+                if (typeof heroYtPlayer.seekTo === "function") heroYtPlayer.seekTo(0);
+                if (typeof heroYtPlayer.playVideo === "function") heroYtPlayer.playVideo();
+              }
+            } else {
+              hideHeroVideo();
+            }
+          }
+        }
+      });
     } catch (e) {
-      console.warn("Không thể gửi postMessage tới hero video:", e);
+      console.warn("Lỗi khởi tạo YouTube Player:", e);
     }
   }
+
+  window.onYouTubeIframeAPIReady = function() {
+    initHeroYouTubePlayer();
+  };
+
+  (function loadYouTubeApi() {
+    if (window.YT && window.YT.Player) {
+      initHeroYouTubePlayer();
+      return;
+    }
+    const tag = document.createElement("script");
+    tag.src = "https://www.youtube.com/iframe_api";
+    const firstScript = document.getElementsByTagName("script")[0];
+    if (firstScript && firstScript.parentNode) {
+      firstScript.parentNode.insertBefore(tag, firstScript);
+    } else {
+      document.head.appendChild(tag);
+    }
+  })();
 
   function updateHeroMuteUI(muted) {
     const iconMuted = document.getElementById("hero-mute-icon-muted");
@@ -127,13 +231,28 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  function getHeroList() {
+    if (Array.isArray(CINEGO_DATA.heroSlides) && CINEGO_DATA.heroSlides.length > 0) {
+      return CINEGO_DATA.heroSlides;
+    }
+    if (Array.isArray(CINEGO_DATA.heroMovies) && CINEGO_DATA.heroMovies.length > 0) {
+      return CINEGO_DATA.heroMovies;
+    }
+    return [];
+  }
+
   function renderHeroSlide(index) {
-    const movie = CINEGO_DATA.heroMovies[index];
+    // Ẩn ngay video hiện tại
+    hideHeroVideo();
+
+    const heroList = getHeroList();
+    if (!heroList || heroList.length === 0) return;
+
+    const movie = heroList[index];
     if (!movie) return;
 
     AppState.currentHeroIndex = index;
     const heroBg = document.getElementById("hero-backdrop-img");
-    const heroVideo = document.getElementById("hero-bg-video");
     const heroTitle = document.getElementById("hero-title");
     const heroTagline = document.getElementById("hero-tagline");
     const heroDesc = document.getElementById("hero-desc");
@@ -145,39 +264,47 @@ document.addEventListener("DOMContentLoaded", () => {
     const heroBookBtn = document.getElementById("hero-book-btn");
     const heroTrailerBtn = document.getElementById("hero-trailer-btn");
 
+    // Lấy trailerUrl từ slide hoặc tra cứu từ danh sách nowShowing
+    let trailerUrl = movie.trailerUrl || "";
+    if (!trailerUrl && Array.isArray(CINEGO_DATA.nowShowing)) {
+      const match = CINEGO_DATA.nowShowing.find(m =>
+        m.title && (m.title.toLowerCase() === (movie.title || "").toLowerCase() ||
+        (movie.vietnameseTitle && m.title.toLowerCase() === movie.vietnameseTitle.toLowerCase()))
+      );
+      if (match && match.trailerUrl) {
+        trailerUrl = match.trailerUrl;
+      }
+    }
+
+    const videoId = extractYouTubeId(trailerUrl);
+
+    // Cập nhật ngay ảnh nền thumbnail HD
     if (heroBg) {
-      const videoId = extractYouTubeId(movie.trailerUrl);
       const thumbSrc = videoId
         ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`
         : (movie.backdrop || movie.poster || "");
-      const fallbackSrc = movie.backdrop || movie.poster || "";
+      const fallbackSrc = movie.poster || movie.backdrop || "";
 
-      heroBg.style.opacity = "0.2";
-      heroBg.style.transition = "opacity 0.4s ease";
-      heroBg.onerror = null;
-      const img = new Image();
-      img.onload = () => {
-        heroBg.onerror = () => { heroBg.src = fallbackSrc; heroBg.onerror = null; };
-        heroBg.src = img.src;
-        heroBg.style.opacity = "1";
+      heroBg.onerror = function() {
+        this.onerror = null;
+        this.src = fallbackSrc;
       };
-      img.onerror = () => {
-        heroBg.onerror = null;
-        heroBg.src = fallbackSrc;
-        heroBg.style.opacity = "1";
-      };
-      img.src = thumbSrc;
+      heroBg.src = thumbSrc;
+      heroBg.style.opacity = "1";
     }
 
-    if (heroVideo) {
-      const videoId = extractYouTubeId(movie.trailerUrl);
-      if (videoId) {
-        const muteParam = isHeroMuted ? 1 : 0;
-        const newSrc = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=${muteParam}&loop=1&playlist=${videoId}&controls=0&showinfo=0&rel=0&modestbranding=1&iv_load_policy=3&playsinline=1&enablejsapi=1`;
-        if (heroVideo.getAttribute("data-video-id") !== videoId) {
-          heroVideo.setAttribute("data-video-id", videoId);
-          heroVideo.src = newSrc;
+    // Cập nhật video nền qua YouTube IFrame Player API
+    if (videoId) {
+      pendingHeroVideoId = videoId;
+      if (heroYtPlayer && typeof heroYtPlayer.loadVideoById === "function") {
+        heroYtPlayer.loadVideoById(videoId);
+        if (isHeroMuted) {
+          if (typeof heroYtPlayer.mute === "function") heroYtPlayer.mute();
+        } else {
+          if (typeof heroYtPlayer.unMute === "function") heroYtPlayer.unMute();
         }
+      } else if (window.YT && window.YT.Player) {
+        initHeroYouTubePlayer();
       }
     }
 
@@ -220,7 +347,9 @@ document.addEventListener("DOMContentLoaded", () => {
       heroTrailerBtn.onclick = () => {
         // Bật tiếng video nền
         isHeroMuted = false;
-        sendHeroVideoCommand("unMute");
+        if (heroYtPlayer && typeof heroYtPlayer.unMute === "function") {
+          heroYtPlayer.unMute();
+        }
         updateHeroMuteUI(false);
 
         // Làm mờ/ẩn khối chữ nội dung phim để xem toàn màn hình
@@ -240,7 +369,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const indicators = document.querySelectorAll(".hero-indicator-dot");
     indicators.forEach((dot, idx) => {
       if (idx === index) {
-        dot.className = "hero-indicator-dot w-8 h-2 rounded-full bg-cine-red transition-all duration-300 shadow-[0_0_10px_rgba(229,9,20,0.8)]";
+        dot.className = "hero-indicator-dot w-6 h-2 rounded-full bg-cine-red transition-all duration-300 shadow-[0_0_10px_rgba(229,9,20,0.8)]";
       } else {
         dot.className = "hero-indicator-dot w-2 h-2 rounded-full bg-zinc-600 hover:bg-zinc-400 transition-all duration-300";
       }
@@ -250,12 +379,16 @@ document.addEventListener("DOMContentLoaded", () => {
   const updateHeroSlide = renderHeroSlide;
 
   function nextHeroSlide() {
-    let nextIndex = (AppState.currentHeroIndex + 1) % CINEGO_DATA.heroMovies.length;
+    const list = getHeroList();
+    if (list.length === 0) return;
+    let nextIndex = (AppState.currentHeroIndex + 1) % list.length;
     renderHeroSlide(nextIndex);
   }
 
   function prevHeroSlide() {
-    let prevIndex = (AppState.currentHeroIndex - 1 + CINEGO_DATA.heroMovies.length) % CINEGO_DATA.heroMovies.length;
+    const list = getHeroList();
+    if (list.length === 0) return;
+    let prevIndex = (AppState.currentHeroIndex - 1 + list.length) % list.length;
     renderHeroSlide(prevIndex);
   }
 
@@ -292,10 +425,12 @@ document.addEventListener("DOMContentLoaded", () => {
   if (heroMuteBtn) {
     heroMuteBtn.addEventListener("click", () => {
       isHeroMuted = !isHeroMuted;
-      if (isHeroMuted) {
-        sendHeroVideoCommand("mute");
-      } else {
-        sendHeroVideoCommand("unMute");
+      if (heroYtPlayer) {
+        if (isHeroMuted) {
+          if (typeof heroYtPlayer.mute === "function") heroYtPlayer.mute();
+        } else {
+          if (typeof heroYtPlayer.unMute === "function") heroYtPlayer.unMute();
+        }
       }
       updateHeroMuteUI(isHeroMuted);
     });
@@ -332,7 +467,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const indicatorContainer = document.getElementById("hero-indicators");
   if (indicatorContainer) {
-    indicatorContainer.innerHTML = CINEGO_DATA.heroMovies.map((_, idx) =>
+    const heroList = getHeroList();
+    indicatorContainer.innerHTML = heroList.map((_, idx) =>
       `<button class="hero-indicator-dot" aria-label="Slide ${idx + 1}" data-index="${idx}"></button>`
     ).join("");
 
@@ -940,7 +1076,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   window.openTrailerModal = function(url, title = "Xem Trailer") {
     if (!trailerModal || !trailerFrame) return;
-    sendHeroVideoCommand("mute");
+    if (heroYtPlayer && typeof heroYtPlayer.mute === "function") {
+      heroYtPlayer.mute();
+    }
     updateHeroMuteUI(true);
     isHeroMuted = true;
     trailerTitle.innerText = title;
@@ -1699,11 +1837,22 @@ document.addEventListener("DOMContentLoaded", () => {
   window.openBookingModal = function(initialData = {}) {
     if (!bookingModal) return;
 
+    const targetMovieTitle = (initialData.movieTitle || "").trim().toLowerCase();
+    let selectedMovie = null;
+    if (targetMovieTitle && Array.isArray(CINEGO_DATA.nowShowing)) {
+      selectedMovie = CINEGO_DATA.nowShowing.find(m => {
+        const t1 = (m.title || "").toLowerCase();
+        const t2 = (m.vietnameseTitle || "").toLowerCase();
+        return t1 === targetMovieTitle || t2 === targetMovieTitle || t1.includes(targetMovieTitle) || targetMovieTitle.includes(t1);
+      });
+    }
+    if (!selectedMovie && Array.isArray(CINEGO_DATA.nowShowing) && CINEGO_DATA.nowShowing.length > 0) {
+      selectedMovie = CINEGO_DATA.nowShowing[0];
+    }
+
     AppState.booking = {
       step: 1,
-      movie: initialData.movieTitle
-        ? CINEGO_DATA.nowShowing.find(m => m.title === initialData.movieTitle) || CINEGO_DATA.nowShowing[0]
-        : CINEGO_DATA.nowShowing[0],
+      movie: selectedMovie,
       cinema: initialData.cinemaName
         ? CINEGO_DATA.cinemas.find(c => c.name === initialData.cinemaName) || CINEGO_DATA.cinemas[0]
         : CINEGO_DATA.cinemas[0],
