@@ -251,6 +251,59 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_ticket' && !empty($_GE
     exit;
 }
 
+if (isset($_GET['action']) && $_GET['action'] === 'export_tickets_csv') {
+    $allTickets = $cinegoModel->getAllTickets();
+    $filename = 'cinego_tickets_' . date('Ymd_His') . '.csv';
+
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+
+    $output = fopen('php://output', 'w');
+    // Xuất UTF-8 BOM để Excel hiển thị tiếng Việt chuẩn không bị lỗi font
+    fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+
+    fputcsv($output, [
+        'Mã vé',
+        'Tên khách hàng',
+        'Số điện thoại',
+        'Email',
+        'Tên phim',
+        'Rạp chiếu',
+        'Phòng chiếu',
+        'Suất chiếu',
+        'Ghế',
+        'Định dạng',
+        'Combo',
+        'Tổng tiền',
+        'Phương thức thanh toán',
+        'Ngày đặt'
+    ]);
+
+    foreach ($allTickets as $t) {
+        fputcsv($output, [
+            $t['ticket_code'] ?? '',
+            $t['customer_name'] ?? '',
+            $t['customer_phone'] ?? '',
+            $t['customer_email'] ?? '',
+            html_entity_decode($t['movie_title'] ?? '', ENT_QUOTES, 'UTF-8'),
+            $t['cinema_name'] ?? '',
+            $t['hall_name'] ?? '',
+            $t['showtime'] ?? '',
+            $t['seats'] ?? '',
+            $t['format'] ?? '',
+            $t['combos'] ?? 'Không có',
+            $t['total_amount'] ?? '',
+            $t['payment_method'] ?? '',
+            $t['created_at'] ?? ''
+        ]);
+    }
+
+    fclose($output);
+    exit;
+}
+
 $editMovie = null;
 if (isset($_GET['action']) && $_GET['action'] === 'edit_movie' && !empty($_GET['id'])) {
     $editMovie = $cinegoModel->getMovieById((int)$_GET['id']);
@@ -262,6 +315,9 @@ $totalMoviesUpcoming = $cinegoModel->countMovies('upcoming');
 $totalTickets        = $cinegoModel->countTickets();
 $totalRevenue        = $cinegoModel->getTotalRevenue();
 $topBookedMovie      = $cinegoModel->getTopBookedMovie();
+
+$dailyStats          = $cinegoModel->getDailyRevenueAndTickets(7);
+$movieRevenueStats   = $cinegoModel->getMovieRevenueDistribution(6);
 
 $filterStatus  = $_GET['filter_status'] ?? null;
 $movieKeyword  = $_GET['movie_kw'] ?? null;
@@ -278,6 +334,7 @@ $ticketsList   = $cinegoModel->getAllTickets($ticketKeyword);
   <title>Bảng Điều Khiển Quản Trị CINEGO | Admin Dashboard</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
@@ -406,6 +463,49 @@ $ticketsList   = $cinegoModel->getAllTickets($ticketKeyword);
         </div>
         <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white flex items-center justify-center font-bold text-xl shadow-lg shadow-purple-900/40 shrink-0">
           🏆
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Khu vực Biểu Đồ Thống Kê Doanh Thu & Vé (Chart.js) -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      <!-- Biểu đồ cột/đường: Doanh thu & Số vé theo từng ngày -->
+      <div class="lg:col-span-2 bg-[#18181F] p-6 rounded-3xl border border-white/10 shadow-xl flex flex-col justify-between">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-4 border-b border-white/5 gap-2">
+          <div>
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-[#E50914]"></span>
+              <span>Xu Hướng Doanh Thu & Lượng Vé (7 Ngày Gần Nhất)</span>
+            </h3>
+            <p class="text-xs text-zinc-400 mt-0.5">Biểu đồ kết hợp cột (Doanh thu VNĐ) và đường (Số lượng vé) tổng hợp theo ngày</p>
+          </div>
+          <div class="flex items-center gap-3 text-xs">
+            <span class="inline-flex items-center gap-1.5 text-red-400 font-semibold">
+              <span class="w-3 h-3 rounded bg-[#E50914]"></span> Doanh thu (VNĐ)
+            </span>
+            <span class="inline-flex items-center gap-1.5 text-emerald-400 font-semibold">
+              <span class="w-3 h-1 bg-emerald-400"></span> Số vé
+            </span>
+          </div>
+        </div>
+        <div class="relative w-full h-72 sm:h-80">
+          <canvas id="dailyRevenueChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Biểu đồ tròn: Tỷ lệ doanh thu theo từng phim -->
+      <div class="bg-[#18181F] p-6 rounded-3xl border border-white/10 shadow-xl flex flex-col justify-between">
+        <div class="pb-4 mb-4 border-b border-white/5">
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+            <span>Tỷ Lệ Doanh Thu Theo Phim</span>
+          </h3>
+          <p class="text-xs text-zinc-400 mt-0.5">Thị phần đóng góp doanh số của các tựa phim ăn khách</p>
+        </div>
+        <div class="relative w-full h-72 sm:h-80 flex items-center justify-center">
+          <canvas id="movieRevenueChart"></canvas>
         </div>
       </div>
 
@@ -778,26 +878,36 @@ $ticketsList   = $cinegoModel->getAllTickets($ticketKeyword);
             <p class="text-xs text-zinc-400 mt-0.5">Dữ liệu vé tự động được ghi nhận mỗi khi khách hàng hoàn tất đặt vé trên website</p>
           </div>
 
-          <form method="GET" action="admin.php" class="flex items-center gap-2">
-            <input type="hidden" name="tab" value="tickets">
-            <div class="relative">
-              <input
-                type="text"
-                name="ticket_kw"
-                placeholder="Tìm mã vé, SĐT, tên khách..."
-                value="<?php echo htmlspecialchars($ticketKeyword ?? ''); ?>"
-                class="w-64 bg-[#0B0B0F] border border-white/15 rounded-xl pl-3.5 pr-8 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#E50914]"
-              />
-              <button type="submit" class="absolute right-2.5 top-2 text-zinc-400 hover:text-white">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-              </button>
-            </div>
-            <?php if (!empty($ticketKeyword)): ?>
-              <a href="admin.php?tab=tickets" class="px-3 py-2 rounded-xl bg-zinc-800 text-zinc-400 hover:text-white text-xs">
-                Xóa lọc
-              </a>
-            <?php endif; ?>
-          </form>
+          <div class="flex items-center flex-wrap gap-2.5">
+            <a
+              href="admin.php?action=export_tickets_csv"
+              class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-md shadow-emerald-900/30"
+              title="Tải toàn bộ danh sách vé dạng file Excel CSV chuẩn tiếng Việt UTF-8 BOM">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              <span>Xuất Báo Cáo Excel (.csv)</span>
+            </a>
+
+            <form method="GET" action="admin.php" class="flex items-center gap-2">
+              <input type="hidden" name="tab" value="tickets">
+              <div class="relative">
+                <input
+                  type="text"
+                  name="ticket_kw"
+                  placeholder="Tìm mã vé, SĐT, tên khách..."
+                  value="<?php echo htmlspecialchars($ticketKeyword ?? ''); ?>"
+                  class="w-60 bg-[#0B0B0F] border border-white/15 rounded-xl pl-3.5 pr-8 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#E50914]"
+                />
+                <button type="submit" class="absolute right-2.5 top-2 text-zinc-400 hover:text-white">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </button>
+              </div>
+              <?php if (!empty($ticketKeyword)): ?>
+                <a href="admin.php?tab=tickets" class="px-3 py-2 rounded-xl bg-zinc-800 text-zinc-400 hover:text-white text-xs">
+                  Xóa lọc
+                </a>
+              <?php endif; ?>
+            </form>
+          </div>
         </div>
 
         <div class="overflow-x-auto">
@@ -891,6 +1001,172 @@ $ticketsList   = $cinegoModel->getAllTickets($ticketKeyword);
           { name: 'styles' },
           { name: 'colors' }
         ]
+      });
+    }
+
+    // ==========================================
+    // KHỞI TẠO BIỂU ĐỒ CHART.JS (DARK MODE)
+    // ==========================================
+    const dailyStats = <?php echo json_encode($dailyStats, JSON_UNESCAPED_UNICODE); ?>;
+    const movieStats = <?php echo json_encode($movieRevenueStats, JSON_UNESCAPED_UNICODE); ?>;
+
+    // 1. Biểu đồ cột/đường: Doanh thu & Lượng vé theo ngày
+    const dailyCtx = document.getElementById('dailyRevenueChart');
+    if (dailyCtx && typeof Chart !== 'undefined') {
+      new Chart(dailyCtx, {
+        type: 'bar',
+        data: {
+          labels: dailyStats.labels || [],
+          datasets: [
+            {
+              type: 'bar',
+              label: 'Doanh thu (VNĐ)',
+              data: dailyStats.revenues || [],
+              backgroundColor: 'rgba(229, 9, 20, 0.8)',
+              hoverBackgroundColor: '#E50914',
+              borderRadius: 8,
+              barThickness: 28,
+              yAxisID: 'y'
+            },
+            {
+              type: 'line',
+              label: 'Số vé bán ra',
+              data: dailyStats.tickets || [],
+              borderColor: '#10B981',
+              backgroundColor: 'rgba(16, 185, 129, 0.2)',
+              borderWidth: 3,
+              pointBackgroundColor: '#10B981',
+              pointBorderColor: '#FFFFFF',
+              pointBorderWidth: 1.5,
+              pointRadius: 5,
+              pointHoverRadius: 7,
+              tension: 0.35,
+              fill: false,
+              yAxisID: 'y1'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: 'index',
+            intersect: false
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#18181F',
+              borderColor: 'rgba(255,255,255,0.15)',
+              borderWidth: 1,
+              titleColor: '#FFFFFF',
+              bodyColor: '#D4D4D8',
+              padding: 12,
+              callbacks: {
+                label: function(context) {
+                  let label = context.dataset.label || '';
+                  if (label) label += ': ';
+                  if (context.dataset.yAxisID === 'y') {
+                    label += new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(context.raw);
+                  } else {
+                    label += context.raw + ' vé';
+                  }
+                  return label;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: 'rgba(255, 255, 255, 0.05)' },
+              ticks: { color: '#A1A1AA', font: { size: 11, family: 'Inter' } }
+            },
+            y: {
+              type: 'linear',
+              display: true,
+              position: 'left',
+              grid: { color: 'rgba(255, 255, 255, 0.06)' },
+              ticks: {
+                color: '#A1A1AA',
+                font: { size: 10, family: 'Inter' },
+                callback: function(val) {
+                  if (val >= 1000000) return (val / 1000000) + 'M';
+                  if (val >= 1000) return (val / 1000) + 'k';
+                  return val;
+                }
+              }
+            },
+            y1: {
+              type: 'linear',
+              display: true,
+              position: 'right',
+              grid: { drawOnChartArea: false },
+              ticks: {
+                color: '#10B981',
+                stepSize: 1,
+                font: { size: 10, family: 'Inter' },
+                callback: function(val) {
+                  return Number.isInteger(val) ? (val + ' vé') : '';
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // 2. Biểu đồ tròn Doughnut: Tỷ lệ doanh thu theo phim
+    const movieCtx = document.getElementById('movieRevenueChart');
+    if (movieCtx && typeof Chart !== 'undefined') {
+      const palette = [
+        '#E50914', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899', '#6366F1'
+      ];
+      const hasData = movieStats.revenues && movieStats.revenues.length > 0 && movieStats.revenues.some(v => v > 0);
+
+      new Chart(movieCtx, {
+        type: 'doughnut',
+        data: {
+          labels: hasData ? movieStats.labels : ['Chưa có vé'],
+          datasets: [{
+            data: hasData ? movieStats.revenues : [1],
+            backgroundColor: hasData ? palette.slice(0, movieStats.labels.length) : ['#272732'],
+            borderColor: '#18181F',
+            borderWidth: 3,
+            hoverOffset: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                color: '#D4D4D8',
+                boxWidth: 12,
+                font: { size: 11, family: 'Inter' },
+                padding: 10
+              }
+            },
+            tooltip: {
+              backgroundColor: '#18181F',
+              borderColor: 'rgba(255,255,255,0.15)',
+              borderWidth: 1,
+              titleColor: '#FFFFFF',
+              bodyColor: '#D4D4D8',
+              padding: 12,
+              callbacks: {
+                label: function(context) {
+                  if (!hasData) return ' Chưa ghi nhận doanh thu vé';
+                  const val = context.raw || 0;
+                  const formatted = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
+                  return ' ' + context.label + ': ' + formatted;
+                }
+              }
+            }
+          },
+          cutout: '65%'
+        }
       });
     }
   </script>

@@ -678,13 +678,19 @@ $cookieCustPhone = $_COOKIE['cinego_customer_phone'] ?? '';
   <section class="py-20 bg-[#121217]/40 relative border-t border-white/5">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-      <div class="flex items-end justify-between mb-12">
+      <div class="flex flex-col sm:flex-row sm:items-end justify-between mb-12 gap-4">
         <div>
           <span class="text-cine-red font-bold text-xs uppercase tracking-widest">Khán giả nói gì</span>
           <h2 class="text-3xl sm:text-4xl font-black text-white mt-1">Đánh Giá Từ Khách Hàng</h2>
-          <p class="text-zinc-400 text-sm mt-1">Cảm nhận của người xem về trải nghiệm điện ảnh và dịch vụ tại CINEGO.</p>
+          <p class="text-zinc-400 text-sm mt-1">Cảm nhận thực tế của người xem về trải nghiệm điện ảnh và dịch vụ tại CINEGO.</p>
         </div>
-        <span class="text-xs text-zinc-500 italic hidden sm:inline">* Dữ liệu đánh giá minh họa giao diện</span>
+        <button
+          type="button"
+          onclick="openReviewModal()"
+          class="px-5 py-3 rounded-xl bg-gradient-to-r from-[#E50914] to-red-700 hover:from-red-600 hover:to-red-800 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-red-900/40 flex items-center gap-2 cursor-pointer self-start sm:self-auto">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+          <span>Viết Đánh Giá Của Bạn</span>
+        </button>
       </div>
 
       <div id="reviews-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -1553,6 +1559,103 @@ $cookieCustPhone = $_COOKIE['cinego_customer_phone'] ?? '';
           Đóng cửa sổ
         </button>
       </div>
+
+    </div>
+  </div>
+
+  <!-- Modal Đánh Giá Phim (Review Modal) -->
+  <div id="review-modal" class="modal-backdrop fixed inset-0 z-50 bg-black/85 backdrop-blur-md hidden items-center justify-center p-4">
+    <div class="modal-content bg-[#14141B] border border-white/10 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl relative">
+
+      <!-- Header Modal -->
+      <div class="p-5 border-b border-white/10 flex items-center justify-between bg-[#181822]/90">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-red-600 to-[#E50914] flex items-center justify-center text-white font-bold text-lg shadow-md shadow-red-900/30">
+            ✍️
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white">Đánh Giá Phim & Dịch Vụ</h3>
+            <p class="text-xs text-zinc-400">Chia sẻ trải nghiệm điện ảnh thực tế của bạn tại CINEGO</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeReviewModal()" class="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Form Đánh Giá -->
+      <form id="review-form" onsubmit="handleReviewSubmit(event)" class="p-6 space-y-4 text-xs">
+        <div>
+          <label class="block text-zinc-300 font-semibold mb-1.5 uppercase tracking-wider text-[11px]">
+            Mã Vé Điện Tử <span class="text-red-500">*</span>
+          </label>
+          <div class="relative">
+            <input
+              type="text"
+              id="review-ticket-code"
+              name="ticket_code"
+              required
+              placeholder="VD: CGO-123456"
+              class="w-full bg-[#0B0B0F] border border-white/15 rounded-xl px-4 py-3 text-sm text-white uppercase placeholder-zinc-500 focus:outline-none focus:border-[#E50914] font-mono tracking-wider"
+            />
+          </div>
+          <p class="text-[11px] text-zinc-500 mt-1">💡 Nhập đúng mã vé trên vé điện tử hoặc email để hệ thống xác thực người xem thật.</p>
+        </div>
+
+        <div>
+          <label class="block text-zinc-300 font-semibold mb-1.5 uppercase tracking-wider text-[11px]">
+            Chấm Điểm Phim <span class="text-red-500">*</span>
+          </label>
+          <div class="flex items-center gap-3">
+            <select
+              id="review-rating"
+              name="rating"
+              required
+              class="w-full bg-[#0B0B0F] border border-white/15 rounded-xl px-4 py-3 text-sm text-amber-400 font-bold focus:outline-none focus:border-[#E50914]">
+              <option value="10">⭐ 10/10 - Kiệt tác xuất sắc, nhất định phải xem!</option>
+              <option value="9.5" selected>⭐ 9.5/10 - Quá đỉnh, hình âm mãn nhãn</option>
+              <option value="9.0">⭐ 9.0/10 - Rất hay và ý nghĩa</option>
+              <option value="8.5">⭐ 8.5/10 - Phim cuốn, kỹ xảo đẹp</option>
+              <option value="8.0">⭐ 8.0/10 - Trải nghiệm điện ảnh tốt</option>
+              <option value="7.5">⭐ 7.5/10 - Khá hay, xem giải trí tốt</option>
+              <option value="7.0">⭐ 7.0/10 - Xem được, vừa phải</option>
+              <option value="6.0">⭐ 6.0/10 - Bình thường</option>
+              <option value="5.0">⭐ 5.0/10 - Tạm chấp nhận</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-zinc-300 font-semibold mb-1.5 uppercase tracking-wider text-[11px]">
+            Nội Dung Nhận Xét Của Bạn <span class="text-red-500">*</span>
+          </label>
+          <textarea
+            id="review-comment"
+            name="comment"
+            required
+            rows="4"
+            placeholder="Chia sẻ cảm xúc của bạn về nội dung phim, diễn xuất, kỹ xảo hoặc dịch vụ rạp chiếu CINEGO..."
+            class="w-full bg-[#0B0B0F] border border-white/15 rounded-xl p-3.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[#E50914] resize-none"
+          ></textarea>
+        </div>
+
+        <div id="review-alert" class="hidden p-3 rounded-xl text-xs"></div>
+
+        <div class="pt-3 border-t border-white/10 flex items-center justify-end gap-3">
+          <button
+            type="button"
+            onclick="closeReviewModal()"
+            class="px-5 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold transition-all cursor-pointer">
+            Hủy Bỏ
+          </button>
+          <button
+            type="submit"
+            id="review-submit-btn"
+            class="px-6 py-2.5 rounded-xl bg-[#E50914] hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-red-900/30 flex items-center gap-2 cursor-pointer">
+            <span>Gửi Đánh Giá</span>
+          </button>
+        </div>
+      </form>
 
     </div>
   </div>

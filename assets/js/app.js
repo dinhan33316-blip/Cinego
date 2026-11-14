@@ -627,42 +627,216 @@ document.addEventListener("DOMContentLoaded", () => {
     showToast(`Đã sao chép mã ưu đãi "${code}"!`, "success");
   };
 
-  const reviewsGrid = document.getElementById("reviews-grid");
-  if (reviewsGrid) {
-    reviewsGrid.innerHTML = CINEGO_DATA.reviews.map(rev => {
-      const stars = "★".repeat(Math.floor(rev.rating));
-      return `
-        <div class="bg-cine-card rounded-2xl p-6 border border-white/5 flex flex-col justify-between">
-          <div>
-            <div class="flex items-center justify-between mb-4">
-              <div class="flex items-center gap-3">
-                <img src="${rev.avatar}" alt="${rev.name}" class="w-11 h-11 rounded-full object-cover border border-zinc-700" />
-                <div>
-                  <h4 class="text-sm font-bold text-white">${rev.name}</h4>
-                  <span class="text-[11px] text-emerald-400 flex items-center gap-1">
-                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-                    Đã xem tại CINEGO
-                  </span>
+  function escapeHtml(str) {
+    if (!str) return "";
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  // ==========================================
+  // HỆ THỐNG ĐÁNH GIÁ PHIM THỰC TẾ (REVIEWS)
+  // ==========================================
+  window.openReviewModal = function(presetTicketCode = "") {
+    const modal = document.getElementById("review-modal");
+    if (!modal) return;
+    modal.classList.remove("hidden");
+    modal.classList.add("flex");
+    document.body.classList.add("modal-open");
+
+    const codeInput = document.getElementById("review-ticket-code");
+    if (codeInput) {
+      if (presetTicketCode) {
+        codeInput.value = presetTicketCode;
+      }
+      setTimeout(() => codeInput.focus(), 100);
+    }
+  };
+
+  window.closeReviewModal = function() {
+    const modal = document.getElementById("review-modal");
+    if (!modal) return;
+    modal.classList.add("hidden");
+    modal.classList.remove("flex");
+    document.body.classList.remove("modal-open");
+
+    const alertEl = document.getElementById("review-alert");
+    if (alertEl) {
+      alertEl.classList.add("hidden");
+      alertEl.innerHTML = "";
+    }
+  };
+
+  window.handleReviewSubmit = async function(event) {
+    event.preventDefault();
+    const form = document.getElementById("review-form");
+    const submitBtn = document.getElementById("review-submit-btn");
+    const alertEl = document.getElementById("review-alert");
+
+    const ticketCode = (document.getElementById("review-ticket-code")?.value || "").trim();
+    const rating     = document.getElementById("review-rating")?.value || "9.5";
+    const comment    = (document.getElementById("review-comment")?.value || "").trim();
+
+    if (!ticketCode) {
+      showToast("Vui lòng nhập Mã vé điện tử của bạn!", "error");
+      return;
+    }
+    if (!comment || comment.length < 5) {
+      showToast("Nội dung nhận xét cần ít nhất 5 ký tự!", "error");
+      return;
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `
+        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline-block" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+        </svg>
+        <span>Đang gửi...</span>
+      `;
+    }
+
+    try {
+      const response = await fetch("api.php?action=submit_review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ticket_code: ticketCode,
+          rating: rating,
+          comment: comment
+        })
+      });
+
+      const resData = await response.json();
+
+      if (resData.success) {
+        showToast(resData.message || "Gửi đánh giá thành công! Cảm ơn bạn.", "success");
+        if (form) form.reset();
+        closeReviewModal();
+        if (typeof window.loadRealReviews === "function") {
+          window.loadRealReviews();
+        }
+      } else {
+        if (alertEl) {
+          alertEl.className = "p-3 rounded-xl text-xs bg-red-950/60 border border-red-500/40 text-red-300 block";
+          alertEl.textContent = resData.message || "Không thể gửi đánh giá. Vui lòng kiểm tra lại!";
+        }
+        showToast(resData.message || "Lỗi khi gửi đánh giá", "error");
+      }
+    } catch (err) {
+      console.error("[CINEGO Review Error]:", err);
+      if (alertEl) {
+        alertEl.className = "p-3 rounded-xl text-xs bg-red-950/60 border border-red-500/40 text-red-300 block";
+        alertEl.textContent = "Lỗi kết nối tới máy chủ. Vui lòng thử lại sau!";
+      }
+      showToast("Lỗi kết nối máy chủ", "error");
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<span>Gửi Đánh Giá</span>`;
+      }
+    }
+  };
+
+  window.loadRealReviews = async function() {
+    const reviewsGrid = document.getElementById("reviews-grid");
+    if (!reviewsGrid) return;
+
+    try {
+      const res = await fetch("api.php?action=get_reviews");
+      const data = await res.json();
+
+      if (data.success && Array.isArray(data.reviews) && data.reviews.length > 0) {
+        reviewsGrid.innerHTML = data.reviews.slice(0, 8).map(rev => {
+          const ratingVal = parseFloat(rev.rating) || 9.0;
+          const starsCount = Math.min(5, Math.max(1, Math.round(ratingVal / 2)));
+          const stars = "★".repeat(starsCount) + "☆".repeat(5 - starsCount);
+
+          const firstChar = (rev.customer_name || "A").trim().charAt(0).toUpperCase();
+          const cleanCode = rev.ticket_code ? rev.ticket_code.replace(/(.{4})(.*)(.{2})/, "$1***$3") : "CGO-***";
+
+          return `
+            <div class="bg-cine-card rounded-2xl p-6 border border-white/5 flex flex-col justify-between hover:border-red-500/30 transition-all duration-300 group shadow-lg">
+              <div>
+                <div class="flex items-center justify-between mb-4">
+                  <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-full bg-gradient-to-tr from-red-600 to-amber-500 flex items-center justify-center font-black text-white text-base shadow-md shrink-0">
+                      ${firstChar}
+                    </div>
+                    <div>
+                      <h4 class="text-sm font-bold text-white group-hover:text-red-400 transition-colors">${escapeHtml(rev.customer_name)}</h4>
+                      <span class="text-[11px] text-emerald-400 flex items-center gap-1 font-medium">
+                        <svg class="w-3 h-3 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                        Khách có vé (${escapeHtml(cleanCode)})
+                      </span>
+                    </div>
+                  </div>
+                  <div class="text-right">
+                    <div class="text-amber-400 text-xs tracking-wider">${stars}</div>
+                    <div class="text-amber-400 font-extrabold text-xs mt-0.5">${ratingVal.toFixed(1)}/10</div>
+                  </div>
                 </div>
+
+                <p class="text-xs text-zinc-300 leading-relaxed mb-4 italic">
+                  "${escapeHtml(rev.comment)}"
+                </p>
               </div>
-              <div class="flex text-amber-400 text-sm tracking-wider">
-                ${stars}
+
+              <div class="pt-3 border-t border-white/5 flex items-center justify-between text-[11px] text-zinc-500">
+                <span class="truncate max-w-[65%]" title="${escapeHtml(rev.movie_title)}">Phim: <strong class="text-zinc-300">${escapeHtml(rev.movie_title)}</strong></span>
+                <span class="shrink-0">${escapeHtml(rev.date_formatted || rev.created_at || "")}</span>
               </div>
             </div>
+          `;
+        }).join("");
+        return;
+      }
+    } catch (err) {
+      console.warn("[CINEGO Reviews] Không thể nạp review từ MySQL, hiển thị dữ liệu mặc định:", err);
+    }
 
-            <p class="text-xs text-zinc-300 leading-relaxed mb-4 italic">
-              "${rev.content}"
-            </p>
-          </div>
+    if (typeof CINEGO_DATA !== "undefined" && Array.isArray(CINEGO_DATA.reviews)) {
+      reviewsGrid.innerHTML = CINEGO_DATA.reviews.map(rev => {
+        const stars = "★".repeat(Math.floor(rev.rating || 5));
+        return `
+          <div class="bg-cine-card rounded-2xl p-6 border border-white/5 flex flex-col justify-between hover:border-red-500/20 transition-all duration-300">
+            <div>
+              <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-3">
+                  <img src="${rev.avatar}" alt="${rev.name}" class="w-11 h-11 rounded-full object-cover border border-zinc-700" />
+                  <div>
+                    <h4 class="text-sm font-bold text-white">${rev.name}</h4>
+                    <span class="text-[11px] text-emerald-400 flex items-center gap-1">
+                      <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                      Đã xem tại CINEGO
+                    </span>
+                  </div>
+                </div>
+                <div class="flex text-amber-400 text-sm tracking-wider">
+                  ${stars}
+                </div>
+              </div>
 
-          <div class="pt-3 border-t border-white/5 flex items-center justify-between text-[11px] text-zinc-500">
-            <span>Phim: <strong class="text-zinc-400">${rev.movie}</strong></span>
-            <span>${rev.date}</span>
+              <p class="text-xs text-zinc-300 leading-relaxed mb-4 italic">
+                "${rev.content}"
+              </p>
+            </div>
+
+            <div class="pt-3 border-t border-white/5 flex items-center justify-between text-[11px] text-zinc-500">
+              <span>Phim: <strong class="text-zinc-400">${rev.movie}</strong></span>
+              <span>${rev.date}</span>
+            </div>
           </div>
-        </div>
-      `;
-    }).join("");
-  }
+        `;
+      }).join("");
+    }
+  };
+
+  loadRealReviews();
 
   const trailerModal = document.getElementById("trailer-modal");
   const trailerFrame = document.getElementById("trailer-iframe");

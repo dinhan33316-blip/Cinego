@@ -139,6 +139,63 @@ switch ($action) {
         }
         exit;
 
+    case 'get_reviews':
+        $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 20;
+        if ($limit <= 0) $limit = 20;
+        $reviews = $cinegoModel->getAllReviews($limit);
+
+        echo json_encode([
+            'success' => true,
+            'count'   => count($reviews),
+            'reviews' => $reviews
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+
+    case 'submit_review':
+        $ticketCode = trim($_POST['ticket_code'] ?? $_GET['ticket_code'] ?? '');
+        $rating     = $_POST['rating'] ?? $_GET['rating'] ?? '';
+        $comment    = trim($_POST['comment'] ?? $_GET['comment'] ?? '');
+
+        if (empty($ticketCode) || empty($comment)) {
+            $raw = @file_get_contents('php://input');
+            if (!empty($raw)) {
+                $body = json_decode($raw, true);
+                if ($body) {
+                    $ticketCode = trim($body['ticket_code'] ?? $ticketCode);
+                    $rating     = $body['rating'] ?? $rating;
+                    $comment    = trim($body['comment'] ?? $comment);
+                }
+            }
+        }
+
+        if (empty($ticketCode)) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Vui lòng cung cấp Mã vé (ticket_code).'
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        if ($rating === '' || floatval($rating) <= 0) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Vui lòng chọn điểm đánh giá từ 1 đến 10.'
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        if (empty($comment)) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Vui lòng nhập nội dung đánh giá của bạn.'
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $reviewResult = $cinegoModel->addReview($ticketCode, $rating, $comment);
+        echo json_encode($reviewResult, JSON_UNESCAPED_UNICODE);
+        exit;
+
     default:
         echo json_encode([
             'success' => false,

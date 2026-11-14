@@ -83,6 +83,18 @@ class CinegoModel {
                 PRIMARY KEY (`id`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS `reviews` (
+                `id` int(11) NOT NULL AUTO_INCREMENT,
+                `movie_title` varchar(255) NOT NULL,
+                `ticket_code` varchar(50) NOT NULL UNIQUE,
+                `customer_name` varchar(100) NOT NULL,
+                `rating` decimal(3,1) NOT NULL DEFAULT 9.0,
+                `comment` text NOT NULL,
+                `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`),
+                UNIQUE KEY `idx_ticket_review` (`ticket_code`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
             if ($this->countMovies() < 17) {
                 $this->seedAllMoviesFromData(true);
             }
@@ -828,6 +840,245 @@ class CinegoModel {
         } catch (\PDOException $e) {
             error_log("Lỗi getTopBookedMovie: " . $e->getMessage());
             return null;
+        }
+    }
+
+    public function getDailyRevenueAndTickets($days = 7) {
+        if (!$this->pdo) return ['labels' => [], 'revenues' => [], 'tickets' => []];
+        try {
+            $dates = [];
+            for ($i = $days - 1; $i >= 0; $i--) {
+                $d = date('Y-m-d', strtotime("-$i days"));
+                $dates[$d] = [
+                    'label'   => date('d/m', strtotime($d)),
+                    'revenue' => 0,
+                    'tickets' => 0
+                ];
+            }
+
+            $stmt = $this->pdo->query("SELECT `created_at`, `total_amount` FROM `tickets` ORDER BY `created_at` ASC");
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($rows as $r) {
+                if (empty($r['created_at'])) continue;
+                $dateKey = substr($r['created_at'], 0, 10);
+                $amount = 0;
+                if (!empty($r['total_amount'])) {
+                    $amount = (int)preg_replace('/[^0-9]/', '', $r['total_amount']);
+                }
+
+                if (isset($dates[$dateKey])) {
+                    $dates[$dateKey]['revenue'] += $amount;
+                    $dates[$dateKey]['tickets'] += 1;
+                } else {
+                    $dates[$dateKey] = [
+                        'label'   => date('d/m', strtotime($dateKey)),
+                        'revenue' => $amount,
+                        'tickets' => 1
+                    ];
+                }
+            }
+
+            ksort($dates);
+            if (count($dates) > $days) {
+                $dates = array_slice($dates, -$days, $days, true);
+            }
+
+            $labels   = [];
+            $revenues = [];
+            $tickets  = [];
+            foreach ($dates as $item) {
+                $labels[]   = $item['label'];
+                $revenues[] = $item['revenue'];
+                $tickets[]  = $item['tickets'];
+            }
+
+            return [
+                'labels'   => $labels,
+                'revenues' => $revenues,
+                'tickets'  => $tickets
+            ];
+        } catch (\PDOException $e) {
+            error_log("Lỗi getDailyRevenueAndTickets: " . $e->getMessage());
+            return ['labels' => [], 'revenues' => [], 'tickets' => []];
+        }
+    }
+
+    public function getMovieRevenueDistribution($limit = 6) {
+        if (!$this->pdo) return ['labels' => [], 'revenues' => [], 'tickets' => []];
+        try {
+            $stmt = $this->pdo->query("SELECT `movie_title`, `total_amount` FROM `tickets` WHERE `movie_title` IS NOT NULL AND TRIM(`movie_title`) != ''");
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $movieMap = [];
+            foreach ($rows as $r) {
+                $title = trim(html_entity_decode($r['movie_title'], ENT_QUOTES, 'UTF-8'));
+                if (empty($title)) continue;
+
+                $amount = 0;
+                if (!empty($r['total_amount'])) {
+                    $amount = (int)preg_replace('/[^0-9]/', '', $r['total_amount']);
+                }
+
+                if (!isset($movieMap[$title])) {
+                    $movieMap[$title] = ['revenue' => 0, 'tickets' => 0];
+                }
+                $movieMap[$title]['revenue'] += $amount;
+                $movieMap[$title]['tickets'] += 1;
+            }
+
+            uasort($movieMap, function($a, $b) {
+                return $b['revenue'] <=> $a['revenue'];
+            });
+
+            $labels   = [];
+            $revenues = [];
+            $tickets  = [];
+
+            $idx = 0;
+            $otherRevenue = 0;
+            $otherTickets = 0;
+
+            foreach ($movieMap as $title => $data) {
+                if ($idx < $limit) {
+                    $labels[]   = $title;
+                    $revenues[] = $data['revenue'];
+                    $tickets[]  = $data['tickets'];
+                } else {
+                    $otherRevenue += $data['revenue'];
+                    $otherTickets += $data['tickets'];
+                }
+                $idx++;
+            }
+
+            if ($otherRevenue > 0 || $otherTickets > 0) {
+                $labels[]   = 'Phim khác';
+                $revenues[] = $otherRevenue;
+                $tickets[]  = $otherTickets;
+            }
+
+            return [
+                'labels'   => $labels,
+                'revenues' => $revenues,
+                'tickets'  => $tickets
+            ];
+        } catch (\PDOException $e) {
+            error_log("Lỗi getMovieRevenueDistribution: " . $e->getMessage());
+            return ['labels' => [], 'revenues' => [], 'tickets' => []];
+        }
+    }
+
+    public function getAllReviews($limit = 50) {
+        if (!$this->pdo) return [];
+        try {
+            $sql = "SELECT `id`, `movie_title`, `ticket_code`, `customer_name`, `rating`, `comment`, `created_at`
+                    FROM `reviews`
+                    ORDER BY `id` DESC
+                    LIMIT :lim";
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->bindValue(':lim', (int)$limit, PDO::PARAM_INT);
+            $stmt->execute();
+            $reviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($reviews as &$rev) {
+                $rev['movie_title']   = html_entity_decode($rev['movie_title'], ENT_QUOTES, 'UTF-8');
+                $rev['customer_name'] = html_entity_decode($rev['customer_name'], ENT_QUOTES, 'UTF-8');
+                $rev['rating']        = floatval($rev['rating']);
+                $timestamp = strtotime($rev['created_at']);
+                $rev['date_formatted'] = $timestamp ? date('d/m/Y', $timestamp) : $rev['created_at'];
+            }
+            return $reviews;
+        } catch (\PDOException $e) {
+            error_log("Lỗi getAllReviews: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function addReview($ticketCode, $rating, $comment) {
+        if (!$this->pdo) {
+            return ['success' => false, 'message' => 'Lỗi kết nối cơ sở dữ liệu MySQL.'];
+        }
+
+        $code    = trim($ticketCode);
+        $rate    = floatval($rating);
+        $content = trim($comment);
+
+        if (empty($code)) {
+            return ['success' => false, 'message' => 'Vui lòng nhập Mã vé hợp lệ (VD: CGO-123456).'];
+        }
+        if ($rate < 1 || $rate > 10) {
+            return ['success' => false, 'message' => 'Điểm đánh giá phải từ 1.0 đến 10.0.'];
+        }
+        if (empty($content) || mb_strlen($content, 'UTF-8') < 5) {
+            return ['success' => false, 'message' => 'Nội dung nhận xét phải có ít nhất 5 ký tự.'];
+        }
+
+        try {
+            $stmtTicket = $this->pdo->prepare("SELECT * FROM `tickets` WHERE `ticket_code` = :code LIMIT 1");
+            $stmtTicket->execute([':code' => $code]);
+            $ticket = $stmtTicket->fetch(PDO::FETCH_ASSOC);
+
+            if (!$ticket) {
+                return [
+                    'success' => false,
+                    'message' => "Mã vé '{$code}' không tồn tại trên hệ thống CINEGO. Vui lòng kiểm tra lại vé điện tử của bạn!"
+                ];
+            }
+
+            $stmtCheck = $this->pdo->prepare("SELECT COUNT(*) FROM `reviews` WHERE `ticket_code` = :code");
+            $stmtCheck->execute([':code' => $code]);
+            if ($stmtCheck->fetchColumn() > 0) {
+                return [
+                    'success' => false,
+                    'message' => "Mã vé '{$code}' đã được sử dụng để gửi đánh giá trước đó rồi. Mỗi vé chỉ được đánh giá 1 lần duy nhất!"
+                ];
+            }
+
+            $movieTitle   = $ticket['movie_title'];
+            $customerName = !empty($ticket['customer_name']) ? $ticket['customer_name'] : 'Khán giả CINEGO';
+
+            $insertSql = "INSERT INTO `reviews` (`movie_title`, `ticket_code`, `customer_name`, `rating`, `comment`)
+                          VALUES (:movie_title, :ticket_code, :customer_name, :rating, :comment)";
+            $stmtIns = $this->pdo->prepare($insertSql);
+            $stmtIns->execute([
+                ':movie_title'   => $movieTitle,
+                ':ticket_code'   => $code,
+                ':customer_name' => $customerName,
+                ':rating'        => $rate,
+                ':comment'       => $content
+            ]);
+
+            $newReviewId = (int)$this->pdo->lastInsertId();
+
+            $stmtAvg = $this->pdo->prepare("SELECT AVG(`rating`) as `avg_score`, COUNT(*) as `total_rev` FROM `reviews` WHERE `movie_title` = :mt");
+            $stmtAvg->execute([':mt' => $movieTitle]);
+            $avgData = $stmtAvg->fetch(PDO::FETCH_ASSOC);
+
+            $newScore = 9.0;
+            if ($avgData && !empty($avgData['avg_score'])) {
+                $newScore = round((float)$avgData['avg_score'], 1);
+            }
+
+            $stmtUpd = $this->pdo->prepare("UPDATE `movies` SET `rating` = :rate WHERE `title` = :t1 OR `vietnamese_title` = :t2");
+            $stmtUpd->execute([
+                ':rate' => $newScore,
+                ':t1'   => $movieTitle,
+                ':t2'   => $movieTitle
+            ]);
+
+            return [
+                'success'       => true,
+                'message'       => "Cảm ơn bạn {$customerName}! Đánh giá cho phim '{$movieTitle}' đã được ghi nhận thành công.",
+                'review_id'     => $newReviewId,
+                'movie_title'   => $movieTitle,
+                'customer_name' => $customerName,
+                'new_rating'    => $newScore,
+                'total_reviews' => (int)($avgData['total_rev'] ?? 1)
+            ];
+
+        } catch (\PDOException $e) {
+            error_log("Lỗi addReview: " . $e->getMessage());
+            return ['success' => false, 'message' => 'Lỗi lưu đánh giá: ' . $e->getMessage()];
         }
     }
 }
