@@ -605,3 +605,6 @@ const CINEGO_DATA = {
     }
   ]
 };
+
+window.CINEGO_DATA = CINEGO_DATA;
+window.CINEGO_HERO_DATA = CINEGO_HERO_DATA;

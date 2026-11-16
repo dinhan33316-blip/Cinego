@@ -1,4 +1,4 @@
-document.addEventListener("DOMContentLoaded", () => {
+function initCinegoApp() {
   if (window.lucide) {
     window.lucide.createIcons();
   }
@@ -62,821 +62,455 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 3500);
   };
 
-  const navHeader = document.getElementById("main-nav");
-  const mobileMenuToggle = document.getElementById("mobile-menu-toggle");
-  const mobileMenu = document.getElementById("mobile-menu");
+  // ==========================================
+  // MODULE: NAVIGATION & MOBILE MENU
+  // ==========================================
+  try {
+    const navHeader = document.getElementById("main-nav");
+    const mobileMenuToggle = document.getElementById("mobile-menu-toggle");
+    const mobileMenu = document.getElementById("mobile-menu");
 
-  window.addEventListener("scroll", () => {
-    if (window.scrollY > 40) {
-      navHeader.classList.add("glass-nav", "py-3", "shadow-xl");
-      navHeader.classList.remove("py-5");
-    } else {
-      navHeader.classList.remove("glass-nav", "shadow-xl");
-      navHeader.classList.add("py-5");
-    }
-  });
-
-  if (mobileMenuToggle && mobileMenu) {
-    mobileMenuToggle.addEventListener("click", () => {
-      mobileMenu.classList.toggle("hidden");
-    });
-
-    mobileMenu.querySelectorAll("a").forEach(link => {
-      link.addEventListener("click", () => {
-        mobileMenu.classList.add("hidden");
+    if (navHeader) {
+      window.addEventListener("scroll", () => {
+        if (window.scrollY > 40) {
+          navHeader.classList.add("glass-nav", "py-3", "shadow-xl");
+          navHeader.classList.remove("py-5");
+        } else {
+          navHeader.classList.remove("glass-nav", "shadow-xl");
+          navHeader.classList.add("py-5");
+        }
       });
-    });
-  }
-
-  const HERO_SLIDE_INTERVAL_MS = 18000;
-  let heroSlideInterval = null;
-  let isHeroMuted = true;
-  let isHeroCinemaMode = false;
-  let heroYtPlayer = null;
-  let heroCurtainCheck = null;
-  let pendingHeroVideoId = null;
-
-  function resetHeroSlideTimer() {
-    if (heroSlideInterval) {
-      clearInterval(heroSlideInterval);
-      heroSlideInterval = null;
     }
-    AppState.heroTimer = null;
-    if (!isHeroCinemaMode && isHeroMuted === true) {
-      heroSlideInterval = setInterval(() => {
-        nextHeroSlide();
-      }, HERO_SLIDE_INTERVAL_MS);
-      AppState.heroTimer = heroSlideInterval;
+
+    if (mobileMenuToggle && mobileMenu) {
+      mobileMenuToggle.addEventListener("click", () => {
+        mobileMenu.classList.toggle("hidden");
+      });
+
+      mobileMenu.querySelectorAll("a").forEach(link => {
+        link.addEventListener("click", () => {
+          mobileMenu.classList.add("hidden");
+        });
+      });
     }
+  } catch (err) {
+    console.error("[Cinego Nav Init Error]:", err);
   }
 
-  function stopHeroSlideTimer() {
-    if (heroSlideInterval) {
-      clearInterval(heroSlideInterval);
-      heroSlideInterval = null;
+  // Khai báo sẵn các stub toàn cục dự phòng cho Hero Banner
+  window.sendHeroIframeCommand = function(cmd) {
+    if (window.CinegoHero && typeof window.CinegoHero.sendCommand === "function") {
+      window.CinegoHero.sendCommand(cmd);
     }
-    AppState.heroTimer = null;
-  }
-
-  function nextHeroSlide() {
-    const list = getHeroList();
-    if (!list || list.length === 0) return;
-    const nextIndex = (AppState.currentHeroIndex + 1) % list.length;
-    renderHeroSlide(nextIndex);
-    resetHeroSlideTimer();
-  }
-
-  function prevHeroSlide() {
-    const list = getHeroList();
-    if (!list || list.length === 0) return;
-    const prevIndex = (AppState.currentHeroIndex - 1 + list.length) % list.length;
-    renderHeroSlide(prevIndex);
-    resetHeroSlideTimer();
-  }
-
-  const startAutoSlide = resetHeroSlideTimer;
-  const stopAutoSlide = stopHeroSlideTimer;
-
-  function closeHeroCurtain() {
-    if (heroCurtainCheck) {
-      clearInterval(heroCurtainCheck);
-      heroCurtainCheck = null;
+  };
+  window.updateHeroMuteUI = function(muted) {
+    if (window.CinegoHero && typeof window.CinegoHero.updateMuteUI === "function") {
+      window.CinegoHero.updateMuteUI(muted);
     }
-    const img = document.getElementById('hero-backdrop-img');
-    if (img) {
-      img.classList.remove('opacity-0', 'hero-curtain-hidden');
-      img.style.opacity = '0.99';
-    }
-  }
-
-  function revealHeroVideoSmoothly() {
-    if (heroCurtainCheck) clearInterval(heroCurtainCheck);
-    heroCurtainCheck = setInterval(() => {
-      if (
-        heroYtPlayer &&
-        typeof heroYtPlayer.getPlayerState === 'function' &&
-        typeof heroYtPlayer.getCurrentTime === 'function' &&
-        heroYtPlayer.getPlayerState() === YT.PlayerState.PLAYING &&
-        heroYtPlayer.getCurrentTime() >= 3.0
-      ) {
-        const img = document.getElementById('hero-backdrop-img');
-        if (img) img.style.opacity = '0';
-        clearInterval(heroCurtainCheck);
-        heroCurtainCheck = null;
-      }
-    }, 250);
-  }
-
-  const hideHeroVideo = closeHeroCurtain;
-  const revealHeroVideo = () => {
-    if (heroCurtainCheck) {
-      clearInterval(heroCurtainCheck);
-      heroCurtainCheck = null;
-    }
-    const img = document.getElementById('hero-backdrop-img');
-    if (img) img.style.opacity = '0';
   };
 
-  function extractYouTubeId(url) {
-    if (!url) return "";
-    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
-    return match ? match[1] : "";
-  }
+  // ==========================================
+  // MODULE: THANH ĐẶT VÉ NHANH (QUICK BOOKING)
+  // ==========================================
+  try {
+    const quickCitySelect = document.getElementById("quick-city-select");
+    const quickCinemaSelect = document.getElementById("quick-cinema-select");
+    const quickDateSelect = document.getElementById("quick-date-select");
+    const quickMovieSelect = document.getElementById("quick-movie-select");
+    const quickSubmitBtn = document.getElementById("quick-submit-btn");
 
-  function initHeroYouTubePlayer() {
-    if (heroYtPlayer) return;
-    if (!window.YT || !window.YT.Player) return;
-    const heroVideoEl = document.getElementById("hero-bg-video");
-    if (!heroVideoEl) return;
-
-    const heroList = getHeroList();
-    const firstMovie = heroList[0];
-    const initialVideoId = pendingHeroVideoId || (firstMovie ? extractYouTubeId(firstMovie.trailerUrl) : "73_1biulkYk");
-
-    try {
-      heroYtPlayer = new YT.Player("hero-bg-video", {
-        videoId: initialVideoId || "73_1biulkYk",
-        playerVars: {
-          autoplay: 1,
-          mute: 1,
-          controls: 0,
-          disablekb: 1,
-          fs: 0,
-          iv_load_policy: 3,
-          modestbranding: 1,
-          rel: 0,
-          playsinline: 1
-        },
-        events: {
-          onReady: (event) => {
-            if (isHeroMuted) {
-              if (typeof event.target.mute === "function") event.target.mute();
-            } else {
-              if (typeof event.target.unMute === "function") event.target.unMute();
-            }
-            if (pendingHeroVideoId && pendingHeroVideoId !== initialVideoId) {
-              event.target.loadVideoById(pendingHeroVideoId);
-              pendingHeroVideoId = null;
-            } else if (typeof event.target.playVideo === "function") {
-              event.target.playVideo();
-            }
-          },
-          onStateChange: (event) => {
-            if (event.data === YT.PlayerState.PLAYING) {
-              revealHeroVideoSmoothly();
-            } else if (event.data === YT.PlayerState.BUFFERING || event.data === YT.PlayerState.PAUSED) {
-              closeHeroCurtain();
-            } else if (event.data === YT.PlayerState.ENDED) {
-              closeHeroCurtain();
-              if (!isHeroCinemaMode) {
-                // Tự động chuyển tiếp sang phim kế tiếp khi trailer kết thúc
-                nextHeroSlide();
-              } else {
-                // Ở chế độ xem toàn màn hình (Cinema Mode), phát lặp lại trailer phim đang xem
-                if (heroYtPlayer) {
-                  if (typeof heroYtPlayer.seekTo === "function") heroYtPlayer.seekTo(0);
-                  if (typeof heroYtPlayer.playVideo === "function") heroYtPlayer.playVideo();
-                }
-              }
-            } else {
-              closeHeroCurtain();
-            }
-          }
-        }
+    const weekdays = ["Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
+    const dateOptions = [];
+    const today = new Date();
+    for (let i = 0; i < 7; i++) {
+      const d = new Date();
+      d.setDate(today.getDate() + i);
+      const dayName = i === 0 ? "Hôm nay" : i === 1 ? "Ngày mai" : weekdays[d.getDay()];
+      const dateFormatted = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
+      dateOptions.push({
+        label: `${dayName} (${dateFormatted})`,
+        value: `${dateFormatted}/2026`
       });
-    } catch (e) {
-      console.warn("Lỗi khởi tạo YouTube Player:", e);
-    }
-  }
-
-  window.onYouTubeIframeAPIReady = function() {
-    initHeroYouTubePlayer();
-  };
-
-  (function loadYouTubeApi() {
-    if (window.YT && window.YT.Player) {
-      initHeroYouTubePlayer();
-      return;
-    }
-    const tag = document.createElement("script");
-    tag.src = "https://www.youtube.com/iframe_api";
-    const firstScript = document.getElementsByTagName("script")[0];
-    if (firstScript && firstScript.parentNode) {
-      firstScript.parentNode.insertBefore(tag, firstScript);
-    } else {
-      document.head.appendChild(tag);
-    }
-  })();
-
-  function updateHeroMuteUI(muted) {
-    const iconMuted = document.getElementById("hero-mute-icon-muted");
-    const iconUnmuted = document.getElementById("hero-mute-icon-unmuted");
-    const muteBtn = document.getElementById("hero-mute-btn");
-    if (iconMuted && iconUnmuted) {
-      if (muted) {
-        iconMuted.classList.remove("hidden");
-        iconUnmuted.classList.add("hidden");
-        if (muteBtn) muteBtn.title = "Bật âm thanh trailer";
-      } else {
-        iconMuted.classList.add("hidden");
-        iconUnmuted.classList.remove("hidden");
-        if (muteBtn) muteBtn.title = "Tắt âm thanh trailer";
-      }
-    }
-  }
-
-  function getHeroList() {
-    if (Array.isArray(CINEGO_DATA.heroSlides) && CINEGO_DATA.heroSlides.length > 0) {
-      return CINEGO_DATA.heroSlides;
-    }
-    if (Array.isArray(CINEGO_DATA.heroMovies) && CINEGO_DATA.heroMovies.length > 0) {
-      return CINEGO_DATA.heroMovies;
-    }
-    return [];
-  }
-
-  function renderHeroSlide(index) {
-    // Kéo màn chắn ảnh nền che kín video
-    closeHeroCurtain();
-
-    const heroList = getHeroList();
-    if (!heroList || heroList.length === 0) return;
-
-    const movie = heroList[index];
-    if (!movie) return;
-
-    AppState.currentHeroIndex = index;
-    const heroBg = document.getElementById("hero-backdrop-img");
-    const heroTitle = document.getElementById("hero-title");
-    const heroTagline = document.getElementById("hero-tagline");
-    const heroDesc = document.getElementById("hero-desc");
-    const heroGenre = document.getElementById("hero-genre");
-    const heroDuration = document.getElementById("hero-duration");
-    const heroRating = document.getElementById("hero-rating");
-    const heroAge = document.getElementById("hero-age");
-    const heroFormats = document.getElementById("hero-formats");
-    const heroBookBtn = document.getElementById("hero-book-btn");
-    const heroTrailerBtn = document.getElementById("hero-trailer-btn");
-
-    // Lấy trailerUrl từ slide hoặc tra cứu từ danh sách nowShowing
-    let trailerUrl = movie.trailerUrl || "";
-    if (!trailerUrl && Array.isArray(CINEGO_DATA.nowShowing)) {
-      const match = CINEGO_DATA.nowShowing.find(m =>
-        m.title && (m.title.toLowerCase() === (movie.title || "").toLowerCase() ||
-        (movie.vietnameseTitle && m.title.toLowerCase() === movie.vietnameseTitle.toLowerCase()))
-      );
-      if (match && match.trailerUrl) {
-        trailerUrl = match.trailerUrl;
-      }
     }
 
-    const videoId = extractYouTubeId(trailerUrl);
-
-    // Cập nhật ngay ảnh nền thumbnail HD làm màn chắn che kín video
-    if (heroBg) {
-      const thumbSrc = movie.backdrop || (videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : (movie.poster || ""));
-      const fallbackSrc = movie.poster || movie.backdrop || "";
-
-      heroBg.onerror = function() {
-        this.onerror = null;
-        this.src = fallbackSrc;
-      };
-      heroBg.src = thumbSrc;
+    if (quickDateSelect) {
+      quickDateSelect.innerHTML = dateOptions.map(opt => `<option value="${opt.value}">${opt.label}</option>`).join("");
     }
 
-    // Cập nhật video nền qua YouTube IFrame Player API
-    if (videoId) {
-      pendingHeroVideoId = videoId;
-      if (heroYtPlayer && typeof heroYtPlayer.loadVideoById === "function") {
-        heroYtPlayer.loadVideoById(videoId);
-        if (isHeroMuted) {
-          if (typeof heroYtPlayer.mute === "function") heroYtPlayer.mute();
-        } else {
-          if (typeof heroYtPlayer.unMute === "function") heroYtPlayer.unMute();
-        }
-      } else if (window.YT && window.YT.Player) {
-        initHeroYouTubePlayer();
-      }
+    if (quickMovieSelect && window.CINEGO_DATA && Array.isArray(CINEGO_DATA.nowShowing)) {
+      quickMovieSelect.innerHTML = `<option value="">-- Chọn Phim --</option>` +
+        CINEGO_DATA.nowShowing.map(m => `<option value="${m.title}">${m.title} (${m.ageRating || 'P'})</option>`).join("");
     }
 
-    if (heroTitle) {
-      heroTitle.style.opacity = "0.4";
-      setTimeout(() => {
-        heroTitle.innerText = movie.vietnameseTitle || movie.title;
-        heroTitle.style.opacity = "1";
-      }, 100);
+    function updateQuickCinemas(selectedCity) {
+      if (!quickCinemaSelect || !window.CINEGO_DATA || !Array.isArray(CINEGO_DATA.cinemas)) return;
+      const filtered = selectedCity
+        ? CINEGO_DATA.cinemas.filter(c => c.city === selectedCity)
+        : CINEGO_DATA.cinemas;
+
+      quickCinemaSelect.innerHTML = `<option value="">-- Chọn Rạp Chiếu --</option>` +
+        filtered.map(c => `<option value="${c.name}">${c.name}</option>`).join("");
     }
 
-    if (heroTagline) heroTagline.innerText = movie.tagline || "TRẢI NGHIỆM ĐIỆN ẢNH ĐỈNH CAO";
-
-    if (heroDesc) {
-      heroDesc.style.opacity = "0.4";
-      setTimeout(() => {
-        heroDesc.innerText = movie.description;
-        heroDesc.style.opacity = "1";
-      }, 100);
-    }
-
-    if (heroGenre) heroGenre.innerText = movie.genre;
-    if (heroDuration) heroDuration.innerText = movie.duration;
-    if (heroRating) heroRating.innerText = movie.rating;
-    if (heroAge) heroAge.innerText = movie.ageRating;
-
-    if (heroFormats) {
-      heroFormats.innerHTML = movie.format.map(fmt =>
-        `<span class="px-2.5 py-1 text-xs font-semibold rounded-md bg-white/10 text-zinc-200 border border-white/15 backdrop-blur-sm">${fmt}</span>`
-      ).join("");
-    }
-
-    if (heroBookBtn) {
-      heroBookBtn.onclick = () => {
-        openBookingModal({ movieTitle: movie.title });
-      };
-    }
-
-    if (heroTrailerBtn) {
-      heroTrailerBtn.onclick = () => {
-        // Đặt chế độ xem Cinema toàn màn hình và dừng tự động chuyển slide
-        isHeroCinemaMode = true;
-        if (heroSlideInterval) {
-          clearInterval(heroSlideInterval);
-          heroSlideInterval = null;
-        }
-
-        // Bật tiếng video nền
-        isHeroMuted = false;
-        if (heroYtPlayer && typeof heroYtPlayer.unMute === "function") {
-          heroYtPlayer.unMute();
-        }
-        updateHeroMuteUI(false);
-
-        // Mở ngay màn chắn để lộ video trailer
-        revealHeroVideo();
-
-        // Làm mờ/ẩn khối chữ nội dung phim để xem toàn màn hình
-        const heroContentWrapper = document.getElementById("hero-content-wrapper");
-        const heroExitCinemaBtn = document.getElementById("hero-exit-cinema-btn");
-        if (heroContentWrapper) {
-          heroContentWrapper.classList.add("opacity-0", "pointer-events-none");
-          heroContentWrapper.classList.remove("opacity-100", "pointer-events-auto");
-        }
-        if (heroExitCinemaBtn) {
-          heroExitCinemaBtn.classList.remove("hidden");
-          heroExitCinemaBtn.classList.add("inline-flex");
-        }
-      };
-    }
-
-    const indicators = document.querySelectorAll(".hero-indicator-dot");
-    indicators.forEach((dot, idx) => {
-      if (idx === index) {
-        dot.className = "hero-indicator-dot w-6 h-2 rounded-full bg-cine-red transition-all duration-300 shadow-[0_0_10px_rgba(229,9,20,0.8)]";
-      } else {
-        dot.className = "hero-indicator-dot w-2 h-2 rounded-full bg-zinc-600 hover:bg-zinc-400 transition-all duration-300";
-      }
-    });
-  }
-
-  const updateHeroSlide = renderHeroSlide;
-
-  const heroPrevBtn = document.getElementById("hero-prev-btn");
-  const heroNextBtn = document.getElementById("hero-next-btn");
-  if (heroPrevBtn) {
-    heroPrevBtn.addEventListener("click", () => {
-      prevHeroSlide();
-    });
-  }
-  if (heroNextBtn) {
-    heroNextBtn.addEventListener("click", () => {
-      nextHeroSlide();
-    });
-  }
-
-  const heroMuteBtn = document.getElementById("hero-mute-btn");
-  if (heroMuteBtn) {
-    heroMuteBtn.addEventListener("click", () => {
-      isHeroMuted = !isHeroMuted;
-      if (heroYtPlayer) {
-        if (isHeroMuted) {
-          if (typeof heroYtPlayer.mute === "function") heroYtPlayer.mute();
-        } else {
-          if (typeof heroYtPlayer.unMute === "function") heroYtPlayer.unMute();
-        }
-      }
-      updateHeroMuteUI(isHeroMuted);
-
-      if (!isHeroMuted) {
-        // Tạm dừng chuyển slide khi người dùng đang bật tiếng xem trailer
-        if (heroSlideInterval) {
-          clearInterval(heroSlideInterval);
-          heroSlideInterval = null;
-        }
-      } else {
-        // Tắt tiếng lại thì tiếp tục đếm 18 giây
-        resetHeroSlideTimer();
-      }
-    });
-  }
-
-  const heroExitCinemaBtn = document.getElementById("hero-exit-cinema-btn");
-  if (heroExitCinemaBtn) {
-    heroExitCinemaBtn.addEventListener("click", () => {
-      isHeroCinemaMode = false;
-      const heroContentWrapper = document.getElementById("hero-content-wrapper");
-      if (heroContentWrapper) {
-        heroContentWrapper.classList.remove("opacity-0", "pointer-events-none");
-        heroContentWrapper.classList.add("opacity-100", "pointer-events-auto");
-      }
-      heroExitCinemaBtn.classList.add("hidden");
-      heroExitCinemaBtn.classList.remove("inline-flex");
-      resetHeroSlideTimer();
-    });
-  }
-
-  const indicatorContainer = document.getElementById("hero-indicators");
-  if (indicatorContainer) {
-    const heroList = getHeroList();
-    indicatorContainer.innerHTML = heroList.map((_, idx) =>
-      `<button class="hero-indicator-dot" aria-label="Slide ${idx + 1}" data-index="${idx}"></button>`
-    ).join("");
-
-    indicatorContainer.querySelectorAll(".hero-indicator-dot").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const idx = parseInt(btn.getAttribute("data-index"), 10);
-        renderHeroSlide(idx);
-        resetHeroSlideTimer();
+    if (quickCitySelect) {
+      quickCitySelect.addEventListener("change", (e) => {
+        updateQuickCinemas(e.target.value);
       });
-    });
+      updateQuickCinemas(quickCitySelect.value);
+    }
+
+    if (quickSubmitBtn) {
+      quickSubmitBtn.addEventListener("click", () => {
+        const cinema = quickCinemaSelect ? quickCinemaSelect.value : "";
+        const date = quickDateSelect ? quickDateSelect.value : "";
+        const movie = quickMovieSelect ? quickMovieSelect.value : "";
+
+        if (!movie) {
+          showToast("Vui lòng chọn bộ phim bạn muốn xem!", "error");
+          if (quickMovieSelect) quickMovieSelect.focus();
+          return;
+        }
+
+        openBookingModal({
+          movieTitle: movie,
+          cinemaName: cinema,
+          date: date
+        });
+      });
+    }
+  } catch (err) {
+    console.error("[Cinego Quick Booking Init Error]:", err);
   }
 
-  renderHeroSlide(0);
-  resetHeroSlideTimer();
+  // ==========================================
+  // MODULE: PHIM ĐANG CHIẾU (NOW SHOWING)
+  // ==========================================
+  try {
+    const moviesGrid = document.getElementById("now-showing-grid");
+    const genreFiltersContainer = document.getElementById("genre-filters");
+    const emptyState = document.getElementById("movies-empty-state");
 
-  const quickCitySelect = document.getElementById("quick-city-select");
-  const quickCinemaSelect = document.getElementById("quick-cinema-select");
-  const quickDateSelect = document.getElementById("quick-date-select");
-  const quickMovieSelect = document.getElementById("quick-movie-select");
-  const quickSubmitBtn = document.getElementById("quick-submit-btn");
+    function renderMovies(genre = "all") {
+      if (!moviesGrid || !window.CINEGO_DATA || !Array.isArray(CINEGO_DATA.nowShowing)) return;
 
-  const weekdays = ["Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
-  const dateOptions = [];
-  const today = new Date();
-  for (let i = 0; i < 7; i++) {
-    const d = new Date();
-    d.setDate(today.getDate() + i);
-    const dayName = i === 0 ? "Hôm nay" : i === 1 ? "Ngày mai" : weekdays[d.getDay()];
-    const dateFormatted = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
-    dateOptions.push({
-      label: `${dayName} (${dateFormatted})`,
-      value: `${dateFormatted}/2026`
-    });
-  }
+      let filtered = CINEGO_DATA.nowShowing;
+      if (genre !== "all") {
+        filtered = filtered.filter(m => Array.isArray(m.genres) && m.genres.some(g => g.toLowerCase().includes(genre.toLowerCase())));
+      }
 
-  if (quickDateSelect) {
-    quickDateSelect.innerHTML = dateOptions.map(opt => `<option value="${opt.value}">${opt.label}</option>`).join("");
-  }
-
-  if (quickMovieSelect) {
-    quickMovieSelect.innerHTML = `<option value="">-- Chọn Phim --</option>` +
-      CINEGO_DATA.nowShowing.map(m => `<option value="${m.title}">${m.title} (${m.ageRating})</option>`).join("");
-  }
-
-  function updateQuickCinemas(selectedCity) {
-    if (!quickCinemaSelect) return;
-    const filtered = selectedCity
-      ? CINEGO_DATA.cinemas.filter(c => c.city === selectedCity)
-      : CINEGO_DATA.cinemas;
-
-    quickCinemaSelect.innerHTML = `<option value="">-- Chọn Rạp Chiếu --</option>` +
-      filtered.map(c => `<option value="${c.name}">${c.name}</option>`).join("");
-  }
-
-  if (quickCitySelect) {
-    quickCitySelect.addEventListener("change", (e) => {
-      updateQuickCinemas(e.target.value);
-    });
-    updateQuickCinemas(quickCitySelect.value);
-  }
-
-  if (quickSubmitBtn) {
-    quickSubmitBtn.addEventListener("click", () => {
-      const city = quickCitySelect ? quickCitySelect.value : "";
-      const cinema = quickCinemaSelect ? quickCinemaSelect.value : "";
-      const date = quickDateSelect ? quickDateSelect.value : "";
-      const movie = quickMovieSelect ? quickMovieSelect.value : "";
-
-      if (!movie) {
-        showToast("Vui lòng chọn bộ phim bạn muốn xem!", "error");
-        if (quickMovieSelect) quickMovieSelect.focus();
+      if (filtered.length === 0) {
+        moviesGrid.innerHTML = "";
+        if (emptyState) emptyState.classList.remove("hidden");
         return;
       }
 
-      openBookingModal({
-        movieTitle: movie,
-        cinemaName: cinema,
-        date: date
-      });
-    });
-  }
+      if (emptyState) emptyState.classList.add("hidden");
 
-  const moviesGrid = document.getElementById("now-showing-grid");
-  const genreFiltersContainer = document.getElementById("genre-filters");
-  const emptyState = document.getElementById("movies-empty-state");
+      moviesGrid.innerHTML = filtered.map(movie => {
+        const formatBadges = Array.isArray(movie.formats) ? movie.formats.map(f =>
+          `<span class="px-2 py-0.5 text-[10px] font-bold rounded bg-zinc-900/80 text-zinc-300 border border-zinc-700 backdrop-blur-md">${f}</span>`
+        ).join(" ") : "";
 
-  function renderMovies(genre = "all") {
-    if (!moviesGrid) return;
+        const genreBadges = Array.isArray(movie.genres) ? movie.genres.map(g =>
+          `<span class="text-xs text-zinc-400">${g}</span>`
+        ).join(" • ") : "";
 
-    let filtered = CINEGO_DATA.nowShowing;
-    if (genre !== "all") {
-      filtered = filtered.filter(m => m.genres.some(g => g.toLowerCase().includes(genre.toLowerCase())));
-    }
+        return `
+          <div class="movie-card group bg-cine-card rounded-2xl overflow-hidden border border-white/5 flex flex-col justify-between hover:border-cine-red/40 transition-all duration-300">
+            <div class="movie-poster-wrapper aspect-[2/3] w-full relative overflow-hidden bg-zinc-900">
+              <img
+                src="${movie.poster || ''}"
+                alt="${movie.title || ''}"
+                loading="lazy"
+                class="movie-poster-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=500&auto=format&fit=crop&q=80';"
+              />
 
-    if (filtered.length === 0) {
-      moviesGrid.innerHTML = "";
-      if (emptyState) emptyState.classList.remove("hidden");
-      return;
-    }
-
-    if (emptyState) emptyState.classList.add("hidden");
-
-    moviesGrid.innerHTML = filtered.map(movie => {
-      const formatBadges = movie.formats.map(f =>
-        `<span class="px-2 py-0.5 text-[10px] font-bold rounded bg-zinc-900/80 text-zinc-300 border border-zinc-700 backdrop-blur-md">${f}</span>`
-      ).join(" ");
-
-      const genreBadges = movie.genres.map(g =>
-        `<span class="text-xs text-zinc-400">${g}</span>`
-      ).join(" • ");
-
-      return `
-        <div class="movie-card group bg-cine-card rounded-2xl overflow-hidden border border-white/5 flex flex-col justify-between hover:border-cine-red/40 transition-all duration-300">
-          <div class="movie-poster-wrapper aspect-[2/3] w-full relative overflow-hidden bg-zinc-900">
-            <img
-              src="${movie.poster}"
-              alt="${movie.title}"
-              loading="lazy"
-              class="movie-poster-img w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-              onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=500&auto=format&fit=crop&q=80';"
-            />
-
-            <div class="absolute top-3 left-3 flex flex-wrap gap-1 z-10">
-              <span class="px-2 py-0.5 text-[11px] font-black rounded bg-cine-red text-white shadow-md">${movie.ageRating}</span>
-              ${formatBadges}
-            </div>
-
-            <div class="absolute top-3 right-3 z-10 flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/75 backdrop-blur-md border border-amber-500/30 text-amber-400 text-xs font-bold shadow-md">
-              <svg class="w-3.5 h-3.5 fill-amber-400 text-amber-400" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-              <span>${movie.rating}</span>
-            </div>
-
-            <div class="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-5 z-20 gap-2.5">
-              <button
-                onclick="window.openTrailerModal('${movie.trailerUrl}', '${movie.title.replace(/'/g, "\\'")}')"
-                class="w-full py-2.5 px-4 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-semibold backdrop-blur-md border border-white/20 flex items-center justify-center gap-2 transition-all">
-                <svg class="w-4 h-4 text-cine-red fill-cine-red" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                Xem Trailer
-              </button>
-              <button
-                onclick="window.openBookingModal({ movieTitle: '${movie.title.replace(/'/g, "\\'")}' })"
-                class="w-full py-2.5 px-4 rounded-xl bg-cine-red hover:bg-cine-red-hover text-white text-xs font-bold uppercase tracking-wider shadow-[0_0_15px_rgba(229,9,20,0.5)] flex items-center justify-center gap-2 transition-all">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
-                Đặt Vé Nhanh
-              </button>
-            </div>
-          </div>
-
-          <div class="p-4 flex flex-col justify-between flex-1">
-            <div>
-              <div class="text-xs text-zinc-400 mb-1 flex items-center gap-1.5 font-medium">
-                ${genreBadges}
+              <div class="absolute top-3 left-3 flex flex-wrap gap-1 z-10">
+                <span class="px-2 py-0.5 text-[11px] font-black rounded bg-cine-red text-white shadow-md">${movie.ageRating || 'P'}</span>
+                ${formatBadges}
               </div>
-              <h3 class="font-bold text-white text-base leading-snug line-clamp-1 group-hover:text-cine-red transition-colors" title="${movie.title}">
-                ${movie.title}
-              </h3>
+
+              <div class="absolute top-3 right-3 z-10 flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/75 backdrop-blur-md border border-amber-500/30 text-amber-400 text-xs font-bold shadow-md">
+                <svg class="w-3.5 h-3.5 fill-amber-400 text-amber-400" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <span>${movie.rating || '9.0'}</span>
+              </div>
+
+              <div class="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-5 z-20 gap-2.5">
+                <button
+                  onclick="window.openTrailerModal('${movie.trailerUrl || ''}', '${(movie.title || '').replace(/'/g, "\\'")}')"
+                  class="w-full py-2.5 px-4 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-semibold backdrop-blur-md border border-white/20 flex items-center justify-center gap-2 transition-all">
+                  <svg class="w-4 h-4 text-cine-red fill-cine-red" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                  Xem Trailer
+                </button>
+                <button
+                  onclick="window.openBookingModal({ movieTitle: '${(movie.title || '').replace(/'/g, "\\'")}' })"
+                  class="w-full py-2.5 px-4 rounded-xl bg-cine-red hover:bg-cine-red-hover text-white text-xs font-bold uppercase tracking-wider shadow-[0_0_15px_rgba(229,9,20,0.5)] flex items-center justify-center gap-2 transition-all">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
+                  Đặt Vé Nhanh
+                </button>
+              </div>
             </div>
 
-            <div class="pt-3 mt-3 border-t border-white/5 flex items-center justify-between text-xs text-zinc-400">
-              <span class="flex items-center gap-1.5">
-                <svg class="w-3.5 h-3.5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                ${movie.duration}
-              </span>
-              <button
-                onclick="window.openBookingModal({ movieTitle: '${movie.title.replace(/'/g, "\\'")}' })"
-                class="text-xs font-bold text-cine-red hover:text-white transition-colors">
-                Đặt vé &rarr;
-              </button>
+            <div class="p-4 flex flex-col justify-between flex-1">
+              <div>
+                <div class="text-xs text-zinc-400 mb-1 flex items-center gap-1.5 font-medium">
+                  ${genreBadges}
+                </div>
+                <h3 class="font-bold text-white text-base leading-snug line-clamp-1 group-hover:text-cine-red transition-colors" title="${movie.title}">
+                  ${movie.title}
+                </h3>
+              </div>
+
+              <div class="pt-3 mt-3 border-t border-white/5 flex items-center justify-between text-xs text-zinc-400">
+                <span class="flex items-center gap-1.5">
+                  <svg class="w-3.5 h-3.5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  ${movie.duration || ''}
+                </span>
+                <button
+                  onclick="window.openBookingModal({ movieTitle: '${(movie.title || '').replace(/'/g, "\\'")}' })"
+                  class="text-xs font-bold text-cine-red hover:text-white transition-colors">
+                  Đặt vé &rarr;
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      `;
-    }).join("");
-  }
+        `;
+      }).join("");
+    }
+    window.renderMovies = renderMovies;
 
-  if (genreFiltersContainer) {
-    const filterButtons = genreFiltersContainer.querySelectorAll(".genre-filter-btn");
-    filterButtons.forEach(btn => {
-      btn.addEventListener("click", () => {
-        filterButtons.forEach(b => {
-          b.classList.remove("bg-cine-red", "text-white", "shadow-lg", "shadow-red-600/30");
-          b.classList.add("bg-cine-card", "text-zinc-400", "hover:text-white");
+    if (genreFiltersContainer) {
+      const filterButtons = genreFiltersContainer.querySelectorAll(".genre-filter-btn");
+      filterButtons.forEach(btn => {
+        btn.addEventListener("click", () => {
+          filterButtons.forEach(b => {
+            b.classList.remove("bg-cine-red", "text-white", "shadow-lg", "shadow-red-600/30");
+            b.classList.add("bg-cine-card", "text-zinc-400", "hover:text-white");
+          });
+          btn.classList.add("bg-cine-red", "text-white", "shadow-lg", "shadow-red-600/30");
+          btn.classList.remove("bg-cine-card", "text-zinc-400");
+
+          const genre = btn.getAttribute("data-genre");
+          AppState.selectedGenre = genre;
+          renderMovies(genre);
         });
-        btn.classList.add("bg-cine-red", "text-white", "shadow-lg", "shadow-red-600/30");
-        btn.classList.remove("bg-cine-card", "text-zinc-400");
-
-        const genre = btn.getAttribute("data-genre");
-        AppState.selectedGenre = genre;
-        renderMovies(genre);
       });
-    });
+    }
+
+    renderMovies("all");
+  } catch (err) {
+    console.error("[Cinego Now Showing Init Error]:", err);
   }
 
-  renderMovies("all");
+  // ==========================================
+  // MODULE: PHIM SẮP CHIẾU (COMING SOON)
+  // ==========================================
+  try {
+    const comingSoonContainer = document.getElementById("coming-soon-grid");
+    if (comingSoonContainer && window.CINEGO_DATA && Array.isArray(CINEGO_DATA.comingSoon)) {
+      comingSoonContainer.innerHTML = CINEGO_DATA.comingSoon.map(movie => {
+        const genreBadges = Array.isArray(movie.genres) ? movie.genres.join(" • ") : "";
+        return `
+          <div class="group relative bg-cine-card rounded-2xl overflow-hidden border border-white/5 hover:border-zinc-700 transition-all duration-300 flex flex-col">
+            <div class="aspect-[16/10] sm:aspect-[2/3] w-full relative overflow-hidden bg-zinc-900">
+              <img
+                src="${movie.poster || ''}"
+                alt="${movie.title || ''}"
+                loading="lazy"
+                class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              />
+              <div class="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent"></div>
 
-  const comingSoonContainer = document.getElementById("coming-soon-grid");
-  if (comingSoonContainer) {
-    comingSoonContainer.innerHTML = CINEGO_DATA.comingSoon.map(movie => {
-      return `
-        <div class="group relative bg-cine-card rounded-2xl overflow-hidden border border-white/5 hover:border-zinc-700 transition-all duration-300 flex flex-col">
-          <div class="aspect-[16/10] sm:aspect-[2/3] w-full relative overflow-hidden bg-zinc-900">
-            <img
-              src="${movie.poster}"
-              alt="${movie.title}"
-              loading="lazy"
-              class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-            />
-            <div class="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent"></div>
-
-            <div class="absolute top-3 left-3">
-              <span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 backdrop-blur-md">
-                ${movie.releaseDate}
-              </span>
-            </div>
-
-            <div class="absolute bottom-3 left-3 right-3">
-              <div class="flex items-center gap-1.5 text-xs text-zinc-400 mb-1">
-                ${movie.genres.join(" • ")}
+              <div class="absolute top-3 left-3">
+                <span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 backdrop-blur-md">
+                  ${movie.releaseDate || ''}
+                </span>
               </div>
-              <h3 class="font-bold text-white text-base md:text-lg leading-snug line-clamp-1 group-hover:text-cine-red transition-colors">
-                ${movie.title}
-              </h3>
-            </div>
-          </div>
 
-          <div class="p-4 flex flex-col justify-between flex-1 bg-cine-card">
-            <p class="text-xs text-zinc-400 line-clamp-2 mb-4 leading-relaxed">
-              ${movie.description}
-            </p>
-            <div class="flex items-center gap-2">
-              <button
-                onclick="window.openTrailerModal('${movie.trailerUrl}', '${movie.title.replace(/'/g, "\\'")}')"
-                class="flex-1 py-2 px-3 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all">
-                <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                Trailer
-              </button>
-              <button
-                onclick="window.toggleRemindMovie('${movie.title.replace(/'/g, "\\'")}')"
-                class="remind-btn py-2 px-3 rounded-xl bg-zinc-800 hover:bg-cine-red text-zinc-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
-                Nhắc Tôi
-              </button>
+              <div class="absolute bottom-3 left-3 right-3">
+                <div class="flex items-center gap-1.5 text-xs text-zinc-400 mb-1">
+                  ${genreBadges}
+                </div>
+                <h3 class="font-bold text-white text-base md:text-lg leading-snug line-clamp-1 group-hover:text-cine-red transition-colors">
+                  ${movie.title}
+                </h3>
+              </div>
+            </div>
+
+            <div class="p-4 flex flex-col justify-between flex-1 bg-cine-card">
+              <p class="text-xs text-zinc-400 line-clamp-2 mb-4 leading-relaxed">
+                ${movie.description || ''}
+              </p>
+              <div class="flex items-center gap-2">
+                <button
+                  onclick="window.openTrailerModal('${movie.trailerUrl || ''}', '${(movie.title || '').replace(/'/g, "\\'")}')"
+                  class="flex-1 py-2 px-3 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all">
+                  <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                  Trailer
+                </button>
+                <button
+                  onclick="window.toggleRemindMovie('${(movie.title || '').replace(/'/g, "\\'")}')"
+                  class="remind-btn py-2 px-3 rounded-xl bg-zinc-800 hover:bg-cine-red text-zinc-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                  Nhắc Tôi
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      `;
-    }).join("");
+        `;
+      }).join("");
+    }
+  } catch (err) {
+    console.error("[Cinego Coming Soon Init Error]:", err);
   }
 
   window.toggleRemindMovie = function(movieTitle) {
     showToast(`Đã bật nhắc nhở suất chiếu sớm cho phim "${movieTitle}"!`, "success");
   };
 
-  const cinemasGrid = document.getElementById("cinemas-grid");
-  const cityFilterBtns = document.querySelectorAll(".cinema-city-tab");
+  // ==========================================
+  // MODULE: CỤM RẠP CHIẾU (CINEMAS)
+  // ==========================================
+  try {
+    const cinemasGrid = document.getElementById("cinemas-grid");
+    const cityFilterBtns = document.querySelectorAll(".cinema-city-tab");
 
-  function renderCinemas(city = "all") {
-    if (!cinemasGrid) return;
+    function renderCinemas(city = "all") {
+      if (!cinemasGrid || !window.CINEGO_DATA || !Array.isArray(CINEGO_DATA.cinemas)) return;
 
-    let filtered = CINEGO_DATA.cinemas;
-    if (city !== "all") {
-      filtered = filtered.filter(c => c.city.toLowerCase() === city.toLowerCase());
-    }
+      let filtered = CINEGO_DATA.cinemas;
+      if (city !== "all") {
+        filtered = filtered.filter(c => c.city.toLowerCase() === city.toLowerCase());
+      }
 
-    cinemasGrid.innerHTML = filtered.map(cinema => {
-      const amenitiesHtml = cinema.amenities.map(a =>
-        `<span class="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-zinc-800/80 text-zinc-300 border border-zinc-700/50">${a}</span>`
-      ).join("");
+      cinemasGrid.innerHTML = filtered.map(cinema => {
+        const amenitiesHtml = Array.isArray(cinema.amenities) ? cinema.amenities.map(a =>
+          `<span class="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-zinc-800/80 text-zinc-300 border border-zinc-700/50">${a}</span>`
+        ).join("") : "";
 
-      return `
-        <div class="group bg-cine-card rounded-2xl overflow-hidden border border-white/5 hover:border-zinc-700 transition-all duration-300 flex flex-col">
-          <div class="h-48 w-full relative overflow-hidden bg-zinc-900">
-            <img
-              src="${cinema.image}"
-              alt="${cinema.name}"
-              loading="lazy"
-              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-            />
-            <div class="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/30 to-transparent"></div>
+        return `
+          <div class="group bg-cine-card rounded-2xl overflow-hidden border border-white/5 hover:border-zinc-700 transition-all duration-300 flex flex-col">
+            <div class="h-48 w-full relative overflow-hidden bg-zinc-900">
+              <img
+                src="${cinema.image || ''}"
+                alt="${cinema.name || ''}"
+                loading="lazy"
+                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+              <div class="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/30 to-transparent"></div>
 
-            <div class="absolute top-3 left-3">
-              <span class="px-2.5 py-1 rounded-md bg-cine-red text-white text-xs font-bold shadow-md">
-                ${cinema.city}
-              </span>
-            </div>
+              <div class="absolute top-3 left-3">
+                <span class="px-2.5 py-1 rounded-md bg-cine-red text-white text-xs font-bold shadow-md">
+                  ${cinema.city || ''}
+                </span>
+              </div>
 
-            <div class="absolute top-3 right-3 flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/70 backdrop-blur-md text-amber-400 text-xs font-bold border border-amber-500/20">
-              <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-              <span>${cinema.rating}</span>
-            </div>
+              <div class="absolute top-3 right-3 flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/70 backdrop-blur-md text-amber-400 text-xs font-bold border border-amber-500/20">
+                <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <span>${cinema.rating || '9.0'}</span>
+              </div>
 
-            <div class="absolute bottom-3 left-3 right-3">
-              <span class="text-xs font-semibold text-emerald-400 flex items-center gap-1 mb-0.5">
-                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                Cách bạn ${cinema.distance}
-              </span>
-              <h3 class="text-lg font-bold text-white leading-snug group-hover:text-cine-red transition-colors">
-                ${cinema.name}
-              </h3>
-            </div>
-          </div>
-
-          <div class="p-5 flex flex-col justify-between flex-1 gap-4">
-            <div>
-              <p class="text-xs text-zinc-400 flex items-start gap-1.5 mb-3 leading-relaxed">
-                <svg class="w-4 h-4 text-zinc-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                ${cinema.address}
-              </p>
-
-              <div class="flex flex-wrap gap-1.5">
-                ${amenitiesHtml}
+              <div class="absolute bottom-3 left-3 right-3">
+                <span class="text-xs font-semibold text-emerald-400 flex items-center gap-1 mb-0.5">
+                  <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  Cách bạn ${cinema.distance || '1.2km'}
+                </span>
+                <h3 class="text-lg font-bold text-white leading-snug group-hover:text-cine-red transition-colors">
+                  ${cinema.name}
+                </h3>
               </div>
             </div>
 
+            <div class="p-5 flex flex-col justify-between flex-1 gap-4">
+              <div>
+                <p class="text-xs text-zinc-400 flex items-start gap-1.5 mb-3 leading-relaxed">
+                  <svg class="w-4 h-4 text-zinc-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                  ${cinema.address || ''}
+                </p>
+
+                <div class="flex flex-wrap gap-1.5">
+                  ${amenitiesHtml}
+                </div>
+              </div>
+
+              <div class="pt-4 border-t border-white/5 flex items-center justify-between">
+                <span class="text-xs text-zinc-400">Hotline: <strong class="text-white">${cinema.phone || '1900 8181'}</strong></span>
+                <button
+                  onclick="window.openBookingModal({ cinemaName: '${(cinema.name || '').replace(/'/g, "\\'")}' })"
+                  class="px-4 py-2 rounded-xl bg-white/10 hover:bg-cine-red text-white text-xs font-bold transition-all shadow-md">
+                  Xem Lịch Chiếu
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+    window.renderCinemas = renderCinemas;
+
+    cityFilterBtns.forEach(btn => {
+      btn.addEventListener("click", () => {
+        cityFilterBtns.forEach(b => {
+          b.classList.remove("bg-white", "text-black", "font-bold");
+          b.classList.add("text-zinc-400", "hover:text-white");
+        });
+        btn.classList.add("bg-white", "text-black", "font-bold");
+        btn.classList.remove("text-zinc-400");
+
+        const city = btn.getAttribute("data-city");
+        AppState.selectedCinemaCity = city;
+        renderCinemas(city);
+      });
+    });
+
+    renderCinemas("all");
+  } catch (err) {
+    console.error("[Cinego Cinemas Init Error]:", err);
+  }
+
+  // ==========================================
+  // MODULE: ƯU ĐÃI & KHUYẾN MÃI (PROMOTIONS)
+  // ==========================================
+  try {
+    const promotionsGrid = document.getElementById("promotions-grid");
+    if (promotionsGrid && window.CINEGO_DATA && Array.isArray(CINEGO_DATA.promotions)) {
+      promotionsGrid.innerHTML = CINEGO_DATA.promotions.map(promo => {
+        return `
+          <div class="group relative bg-cine-card rounded-2xl p-6 border border-white/5 hover:border-cine-red/30 transition-all duration-300 flex flex-col justify-between">
+            <div class="absolute -top-3 left-6">
+              <span class="px-3 py-1 rounded-full text-[11px] font-bold bg-cine-red text-white uppercase tracking-wider shadow-lg">
+                ${promo.tag}
+              </span>
+            </div>
+
+            <div class="mt-2 mb-4">
+              <h3 class="text-lg font-bold text-white group-hover:text-cine-red transition-colors mb-2">
+                ${promo.title}
+              </h3>
+              <p class="text-xs text-zinc-400 leading-relaxed">
+                ${promo.desc}
+              </p>
+            </div>
+
             <div class="pt-4 border-t border-white/5 flex items-center justify-between">
-              <span class="text-xs text-zinc-400">Hotline: <strong class="text-white">${cinema.phone}</strong></span>
+              <div class="flex flex-col">
+                <span class="text-[10px] text-zinc-500 uppercase font-semibold">Mã ưu đãi demo</span>
+                <span class="font-mono text-sm font-bold text-amber-400">${promo.code}</span>
+              </div>
               <button
-                onclick="window.openBookingModal({ cinemaName: '${cinema.name.replace(/'/g, "\\'")}' })"
-                class="px-4 py-2 rounded-xl bg-white/10 hover:bg-cine-red text-white text-xs font-bold transition-all shadow-md">
-                Xem Lịch Chiếu
+                onclick="window.copyVoucherCode('${promo.code}')"
+                class="px-3.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-semibold transition-colors flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                Sao Chép
               </button>
             </div>
           </div>
-        </div>
-      `;
-    }).join("");
-  }
-
-  cityFilterBtns.forEach(btn => {
-    btn.addEventListener("click", () => {
-      cityFilterBtns.forEach(b => {
-        b.classList.remove("bg-white", "text-black", "font-bold");
-        b.classList.add("text-zinc-400", "hover:text-white");
-      });
-      btn.classList.add("bg-white", "text-black", "font-bold");
-      btn.classList.remove("text-zinc-400");
-
-      const city = btn.getAttribute("data-city");
-      AppState.selectedCinemaCity = city;
-      renderCinemas(city);
-    });
-  });
-
-  renderCinemas("all");
-
-  const promotionsGrid = document.getElementById("promotions-grid");
-  if (promotionsGrid) {
-    promotionsGrid.innerHTML = CINEGO_DATA.promotions.map(promo => {
-      return `
-        <div class="group relative bg-cine-card rounded-2xl p-6 border border-white/5 hover:border-cine-red/30 transition-all duration-300 flex flex-col justify-between">
-          <div class="absolute -top-3 left-6">
-            <span class="px-3 py-1 rounded-full text-[11px] font-bold bg-cine-red text-white uppercase tracking-wider shadow-lg">
-              ${promo.tag}
-            </span>
-          </div>
-
-          <div class="mt-2 mb-4">
-            <h3 class="text-lg font-bold text-white group-hover:text-cine-red transition-colors mb-2">
-              ${promo.title}
-            </h3>
-            <p class="text-xs text-zinc-400 leading-relaxed">
-              ${promo.desc}
-            </p>
-          </div>
-
-          <div class="pt-4 border-t border-white/5 flex items-center justify-between">
-            <div class="flex flex-col">
-              <span class="text-[10px] text-zinc-500 uppercase font-semibold">Mã ưu đãi demo</span>
-              <span class="font-mono text-sm font-bold text-amber-400">${promo.code}</span>
-            </div>
-            <button
-              onclick="window.copyVoucherCode('${promo.code}')"
-              class="px-3.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-semibold transition-colors flex items-center gap-1.5">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-              Sao Chép
-            </button>
-          </div>
-        </div>
-      `;
-    }).join("");
+        `;
+      }).join("");
+    }
+  } catch (err) {
+    console.error("[Cinego Promotions Init Error]:", err);
   }
 
   window.copyVoucherCode = function(code) {
@@ -1104,11 +738,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   window.openTrailerModal = function(url, title = "Xem Trailer") {
     if (!trailerModal || !trailerFrame) return;
-    if (heroYtPlayer && typeof heroYtPlayer.mute === "function") {
-      heroYtPlayer.mute();
+    if (typeof window.sendHeroIframeCommand === "function") {
+      window.sendHeroIframeCommand("mute");
     }
-    updateHeroMuteUI(true);
-    isHeroMuted = true;
+    if (typeof window.updateHeroMuteUI === "function") {
+      window.updateHeroMuteUI(true);
+    }
     trailerTitle.innerText = title;
 
     let embedUrl = (url || "").trim();
@@ -3156,4 +2791,440 @@ document.addEventListener("DOMContentLoaded", () => {
       showToast("Lỗi kết nối máy chủ khi hủy vé!", "error");
     });
   };
-});
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initCinegoApp);
+} else {
+  initCinegoApp();
+}
+
+// ==========================================
+// CỤM ĐIỀU KHIỂN HERO BANNER ĐỘC LẬP (IIFE)
+// ==========================================
+(function initCinegoHero() {
+  function startHero() {
+    const dataObj = (typeof window.CINEGO_DATA !== "undefined" && window.CINEGO_DATA)
+      ? window.CINEGO_DATA
+      : ((typeof CINEGO_DATA !== "undefined" && CINEGO_DATA) ? CINEGO_DATA : null);
+
+    const slides = (dataObj && Array.isArray(dataObj.heroSlides) && dataObj.heroSlides.length > 0)
+      ? dataObj.heroSlides
+      : ((dataObj && Array.isArray(dataObj.nowShowing)) ? dataObj.nowShowing : []);
+
+    if (!slides || slides.length === 0) return;
+
+    let currentIdx = 0;
+    let fadeTimer = null;
+    let autoTimer = null;
+    let audioSyncTimers = [];
+    let isMuted = true;
+    let isCinemaMode = false;
+    let ytReadyForCurrentSlide = false;
+    let hasHandledVideoEnd = false;
+    let lastHeroSwitchAt = Date.now();
+    const AUTO_SLIDE_DELAY = 19000;
+
+    function extractHeroVideoId(url) {
+      if (!url) return "";
+      const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
+      return match ? match[1] : "";
+    }
+
+    function clearAudioAndListenerTimers() {
+      audioSyncTimers.forEach(t => clearTimeout(t));
+      audioSyncTimers = [];
+    }
+
+    function registerHeroYoutubeListener() {
+      const iframe = document.getElementById('hero-bg-video');
+      if (iframe && iframe.contentWindow) {
+        try {
+          iframe.contentWindow.postMessage(
+            JSON.stringify({ event: 'listening', id: 'hero-bg-video', channel: 'widget' }),
+            '*'
+          );
+        } catch (e) {}
+      }
+    }
+
+    function syncHeroAudio() {
+      const iframe = document.getElementById('hero-bg-video');
+      const iconMuted = document.getElementById('hero-mute-icon-muted');
+      const iconUnmuted = document.getElementById('hero-mute-icon-unmuted');
+
+      if (iconMuted && iconUnmuted) {
+        if (isMuted) {
+          iconMuted.classList.remove('hidden');
+          iconUnmuted.classList.add('hidden');
+        } else {
+          iconMuted.classList.add('hidden');
+          iconUnmuted.classList.remove('hidden');
+        }
+      }
+
+      if (iframe && iframe.contentWindow) {
+        const cmd = isMuted ? 'mute' : 'unMute';
+        try {
+          iframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func: cmd, args: [] }), '*');
+          if (!isMuted) {
+            iframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'setVolume', args: [100] }), '*');
+          }
+        } catch (e) {}
+      }
+    }
+
+    function resetHeroAutoSlide() {
+      if (autoTimer) {
+        clearInterval(autoTimer);
+        autoTimer = null;
+      }
+      if (!isCinemaMode && isMuted) {
+        autoTimer = setInterval(() => {
+          renderHero(currentIdx + 1);
+        }, AUTO_SLIDE_DELAY);
+      }
+    }
+
+    function handleHeroYoutubeMessage(event) {
+      const origin = event.origin || "";
+      const isYoutubeOrigin = origin.includes("youtube.com") || origin.includes("youtube-nocookie.com");
+      const isSameOrigin = Boolean(window.location && origin === window.location.origin);
+      if (!isYoutubeOrigin && !isSameOrigin) return;
+
+      if (!event.data || typeof event.data !== "string") return;
+
+      let data;
+      try {
+        data = JSON.parse(event.data);
+      } catch (e) {
+        return;
+      }
+
+      if (!data || typeof data !== "object") return;
+      if (data.id && data.id !== "hero-bg-video") return;
+
+      if (data.event === "onReady" || data.event === "initialDelivery") {
+        ytReadyForCurrentSlide = true;
+        if (data.event === "onReady") {
+          const iframe = document.getElementById("hero-bg-video");
+          if (iframe && iframe.contentWindow) {
+            try {
+              iframe.contentWindow.postMessage(JSON.stringify({ event: "command", func: "addEventListener", args: ["onStateChange"] }), "*");
+            } catch (e) {}
+          }
+        }
+        syncHeroAudio();
+      }
+
+      let playerState = null;
+      if ((data.event === "infoDelivery" || data.event === "initialDelivery") && data.info && typeof data.info.playerState === "number") {
+        ytReadyForCurrentSlide = true;
+        playerState = data.info.playerState;
+      } else if (data.event === "onStateChange" && typeof data.info === "number") {
+        ytReadyForCurrentSlide = true;
+        playerState = data.info;
+      }
+
+      if (playerState === 1) {
+        hasHandledVideoEnd = false;
+      }
+
+      if (playerState === 0) {
+        const elapsedSinceSwitch = Date.now() - lastHeroSwitchAt;
+        if (hasHandledVideoEnd || elapsedSinceSwitch < 2000) {
+          return;
+        }
+        hasHandledVideoEnd = true;
+        renderHero(currentIdx + 1);
+        resetHeroAutoSlide();
+      }
+    }
+
+    function renderHero(index) {
+      currentIdx = (index + slides.length) % slides.length;
+      const slide = slides[currentIdx];
+      if (!slide) return;
+
+      if (window.AppState) window.AppState.currentHeroIndex = currentIdx;
+
+      // 1. Cập nhật các trường text/info
+      const taglineEl = document.getElementById("hero-tagline");
+      const titleEl = document.getElementById("hero-title");
+      const ageEl = document.getElementById("hero-age");
+      const ratingEl = document.getElementById("hero-rating");
+      const durationEl = document.getElementById("hero-duration");
+      const genreEl = document.getElementById("hero-genre");
+      const descEl = document.getElementById("hero-desc");
+      const formatsEl = document.getElementById("hero-formats");
+
+      if (taglineEl) taglineEl.innerText = slide.tagline || "TRẢI NGHIỆM ĐIỆN ẢNH ĐỈNH CAO";
+      if (titleEl) {
+        titleEl.innerText = slide.vietnameseTitle || slide.title || "";
+        titleEl.style.opacity = "1";
+      }
+      if (ageEl) ageEl.innerText = slide.ageRating || "P";
+      if (ratingEl) ratingEl.innerText = slide.rating ? slide.rating : "9.0";
+      if (durationEl) durationEl.innerText = slide.duration || "";
+      if (genreEl) genreEl.innerText = slide.genre || (Array.isArray(slide.genres) ? slide.genres.join(", ") : "");
+      if (descEl) {
+        descEl.innerText = slide.description || "";
+        descEl.style.opacity = "1";
+      }
+
+      // 2. Render lại badge định dạng phim #hero-formats
+      if (formatsEl) {
+        const formats = slide.format || slide.formats || ["2D"];
+        formatsEl.innerHTML = formats.map(fmt =>
+          `<span class="px-2.5 py-1 text-xs font-semibold rounded-md bg-white/10 text-zinc-200 border border-white/15 backdrop-blur-sm">${fmt}</span>`
+        ).join("");
+      }
+
+      // 3. Render lại #hero-indicators và gắn sự kiện click
+      const indicatorContainer = document.getElementById("hero-indicators");
+      if (indicatorContainer) {
+        indicatorContainer.innerHTML = slides.map((_, idx) => {
+          if (idx === currentIdx) {
+            return `<button type="button" aria-label="Slide ${idx + 1}" data-index="${idx}" class="hero-dot h-2.5 rounded-full bg-red-600 w-8 transition-all duration-300 shadow-[0_0_12px_rgba(229,9,20,0.8)] cursor-pointer"></button>`;
+          } else {
+            return `<button type="button" aria-label="Slide ${idx + 1}" data-index="${idx}" class="hero-dot h-2.5 rounded-full bg-white/40 w-2.5 hover:bg-white/70 transition-all duration-300 cursor-pointer"></button>`;
+          }
+        }).join("");
+
+        indicatorContainer.querySelectorAll(".hero-dot").forEach(btn => {
+          btn.onclick = () => {
+            const idx = parseInt(btn.getAttribute("data-index"), 10);
+            renderHero(idx);
+            resetHeroAutoSlide();
+          };
+        });
+      }
+
+      // 4. Lấy videoId của trailer
+      let trailerUrl = slide.trailerUrl || "";
+      if (!trailerUrl && dataObj && Array.isArray(dataObj.nowShowing)) {
+        const match = dataObj.nowShowing.find(m =>
+          m.title && (m.title.toLowerCase() === (slide.title || "").toLowerCase() ||
+          (slide.vietnameseTitle && m.title.toLowerCase() === slide.vietnameseTitle.toLowerCase()))
+        );
+        if (match && match.trailerUrl) trailerUrl = match.trailerUrl;
+      }
+      const videoId = extractHeroVideoId(trailerUrl);
+
+      // 5. Cập nhật màn chắn #hero-backdrop-img (đóng kín 0ms)
+      const img = document.getElementById("hero-backdrop-img");
+      if (img) {
+        img.style.transition = "none";
+        img.style.opacity = "1";
+        img.src = slide.backdrop || (videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : (slide.poster || ""));
+        img.classList.remove("hero-ken-burns");
+        void img.offsetWidth; // kích hoạt reflow
+        img.classList.add("hero-ken-burns");
+      }
+
+      // 6. Cập nhật #hero-bg-video.src (tuyệt đối KHÔNG có tham số playlist=, giữ nguyên trạng thái mute)
+      const iframe = document.getElementById("hero-bg-video");
+      if (iframe && videoId) {
+        clearAudioAndListenerTimers();
+        ytReadyForCurrentSlide = false;
+        hasHandledVideoEnd = false;
+        lastHeroSwitchAt = Date.now();
+
+        const muteParam = isMuted ? 1 : 0;
+        const originParam = encodeURIComponent(window.location.origin);
+        const embedSrc = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=${muteParam}&controls=0&showinfo=0&rel=0&modestbranding=1&iv_load_policy=3&playsinline=1&enablejsapi=1&origin=${originParam}`;
+
+        iframe.onload = () => {
+          registerHeroYoutubeListener();
+          syncHeroAudio();
+          audioSyncTimers.push(setTimeout(() => {
+            if (!ytReadyForCurrentSlide) {
+              registerHeroYoutubeListener();
+            }
+            syncHeroAudio();
+          }, 500));
+        };
+
+        if (iframe.src !== embedSrc) {
+          iframe.src = embedSrc;
+        } else if (slides.length === 1) {
+          // Trường hợp chỉ có 1 slide: phát lại từ đầu khi hết video
+          try {
+            iframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'seekTo', args: [0, true] }), '*');
+            iframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'playVideo', args: [] }), '*');
+          } catch (e) {}
+        }
+
+        // Đồng bộ âm thanh & kích hoạt kênh lắng nghe ngay lập tức và khi video nạp xong
+        registerHeroYoutubeListener();
+        syncHeroAudio();
+        [400, 1000, 2000].forEach(delay => {
+          audioSyncTimers.push(setTimeout(() => {
+            if (!ytReadyForCurrentSlide) {
+              registerHeroYoutubeListener();
+            }
+            syncHeroAudio();
+          }, delay));
+        });
+      }
+
+      // 7. Mở màn chắn sau 3600ms (3.6 giây)
+      clearTimeout(fadeTimer);
+      fadeTimer = setTimeout(() => {
+        if (img) {
+          img.style.transition = "opacity 1s ease-in-out";
+          img.style.opacity = "0";
+        }
+      }, 3600);
+    }
+
+    // Gắn sự kiện nút Prev / Next
+    const prevBtn = document.getElementById("hero-prev-btn");
+    const nextBtn = document.getElementById("hero-next-btn");
+    if (prevBtn) {
+      prevBtn.onclick = () => {
+        renderHero(currentIdx - 1);
+        resetHeroAutoSlide();
+      };
+    }
+    if (nextBtn) {
+      nextBtn.onclick = () => {
+        renderHero(currentIdx + 1);
+        resetHeroAutoSlide();
+      };
+    }
+
+    // Gắn sự kiện nút âm thanh
+    const muteBtn = document.getElementById("hero-mute-btn");
+    if (muteBtn) {
+      muteBtn.onclick = () => {
+        isMuted = !isMuted;
+        syncHeroAudio();
+        setTimeout(syncHeroAudio, 150);
+
+        if (!isMuted) {
+          if (autoTimer) {
+            clearInterval(autoTimer);
+            autoTimer = null;
+          }
+        } else {
+          resetHeroAutoSlide();
+        }
+      };
+    }
+
+    // Gắn sự kiện nút Xem Trailer (Cinema Mode) & Thoát
+    const trailerBtn = document.getElementById("hero-trailer-btn");
+    const exitCinemaBtn = document.getElementById("hero-exit-cinema-btn");
+    const contentWrapper = document.getElementById("hero-content-wrapper");
+
+    if (trailerBtn) {
+      trailerBtn.onclick = () => {
+        isCinemaMode = true;
+        if (autoTimer) {
+          clearInterval(autoTimer);
+          autoTimer = null;
+        }
+
+        // Bật tiếng trailer
+        isMuted = false;
+        syncHeroAudio();
+        setTimeout(syncHeroAudio, 250);
+
+        // Mở ngay màn chắn ảnh nền
+        const img = document.getElementById("hero-backdrop-img");
+        if (img) img.style.opacity = "0";
+
+        // Ẩn nội dung chữ, hiện nút thoát rạp
+        if (contentWrapper) {
+          contentWrapper.classList.add("opacity-0", "pointer-events-none");
+          contentWrapper.classList.remove("opacity-100", "pointer-events-auto");
+        }
+        if (exitCinemaBtn) {
+          exitCinemaBtn.classList.remove("hidden");
+          exitCinemaBtn.classList.add("inline-flex");
+        }
+      };
+    }
+
+    if (exitCinemaBtn) {
+      exitCinemaBtn.onclick = () => {
+        isCinemaMode = false;
+        if (contentWrapper) {
+          contentWrapper.classList.remove("opacity-0", "pointer-events-none");
+          contentWrapper.classList.add("opacity-100", "pointer-events-auto");
+        }
+        exitCinemaBtn.classList.add("hidden");
+        exitCinemaBtn.classList.remove("inline-flex");
+        resetHeroAutoSlide();
+      };
+    }
+
+    // Gắn sự kiện nút Đặt vé
+    const bookBtn = document.getElementById("hero-book-btn");
+    if (bookBtn) {
+      bookBtn.onclick = () => {
+        const slide = slides[currentIdx];
+        if (typeof window.openBookingModal === "function") {
+          window.openBookingModal({ movieTitle: slide ? slide.title : "" });
+        }
+      };
+    }
+
+    // Expose API ra window
+    window.CinegoHero = {
+      renderHero,
+      next: () => { renderHero(currentIdx + 1); resetHeroAutoSlide(); },
+      prev: () => { renderHero(currentIdx - 1); resetHeroAutoSlide(); },
+      mute: () => {
+        isMuted = true;
+        syncHeroAudio();
+      },
+      unMute: () => {
+        isMuted = false;
+        syncHeroAudio();
+        if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+      },
+      syncHeroAudio: syncHeroAudio,
+      sendCommand: (cmd) => {
+        const iframe = document.getElementById("hero-bg-video");
+        if (iframe && iframe.contentWindow) {
+          try {
+            iframe.contentWindow.postMessage(JSON.stringify({ event: "command", func: cmd, args: [] }), "*");
+          } catch (e) {}
+        }
+      },
+      updateMuteUI: syncHeroAudio
+    };
+    window.sendHeroIframeCommand = (cmd) => {
+      if (cmd === 'mute') { isMuted = true; syncHeroAudio(); }
+      else if (cmd === 'unMute') { isMuted = false; syncHeroAudio(); }
+    };
+    window.updateHeroMuteUI = syncHeroAudio;
+
+    // Lắng nghe sự kiện postMessage từ YouTube iframe & duy trì nhịp bắt tay listening mỗi 800ms
+    window.addEventListener("message", handleHeroYoutubeMessage);
+    setInterval(() => {
+      const vidFrame = document.getElementById('hero-bg-video');
+      if (vidFrame && vidFrame.contentWindow) {
+        try {
+          vidFrame.contentWindow.postMessage(
+            JSON.stringify({ event: 'listening', id: 'hero-bg-video', channel: 'widget' }),
+            '*'
+          );
+        } catch (e) {}
+      }
+    }, 800);
+
+    // Khởi chạy slide 0 và kích hoạt bộ đếm 19000ms
+    renderHero(0);
+    resetHeroAutoSlide();
+    syncHeroAudio();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", startHero);
+  } else {
+    startHero();
+  }
+})();

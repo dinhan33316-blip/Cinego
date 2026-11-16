@@ -326,9 +326,9 @@ $cookieCustPhone = $_COOKIE['cinego_customer_phone'] ?? '';
 
   <section id="hero" class="relative min-h-[92vh] flex items-center pt-24 pb-20 overflow-hidden">
 
-    <!-- Lớp 1 (z-10): Video trailer YouTube tràn viền toàn màn hình, luôn hiển thị ở nền dưới -->
-    <div id="hero-video-wrapper" class="absolute inset-0 z-10 overflow-hidden pointer-events-none" style="z-index:10;">
-      <div id="hero-bg-video" class="hero-bg-iframe"></div>
+    <!-- Lớp 1 (z-10): Video trailer YouTube tràn viền toàn màn hình -->
+    <div id="hero-video-wrapper" class="absolute inset-0 overflow-hidden pointer-events-none" style="z-index: 10;">
+      <iframe id="hero-bg-video" class="hero-bg-iframe" src="" allow="autoplay; encrypted-media" allowfullscreen></iframe>
     </div>
 
     <!-- Lớp 2 (z-20): Màn chắn ảnh nền (curtain) che kín video khi YouTube nạp/đổi slide -->
@@ -337,7 +337,7 @@ $cookieCustPhone = $_COOKIE['cinego_customer_phone'] ?? '';
       src="https://img.youtube.com/vi/73_1biulkYk/maxresdefault.jpg"
       alt="Hero Trailer Background"
       class="absolute inset-0 w-full h-full object-cover object-center brightness-50 pointer-events-none select-none"
-      style="z-index: 20; opacity: 0.99; transition: opacity 0.8s ease-in-out;"
+      style="z-index: 20; opacity: 0.99; transition: opacity 1s ease-in-out;"
     />
 
     <!-- Lớp 3 (z-30): Gradient tối hòa trộn viền mượt mà vào nền #0B0B0F -->
